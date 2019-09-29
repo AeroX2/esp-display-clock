@@ -4,79 +4,24 @@
 #include <WiFiManager.h>
 #include <ArduinoOTA.h>
 #include <LEDMatrixDriver.hpp>
+
 #include <time.h>
 #include <sys/time.h> 
 #include <coredecls.h>
 
 #include "font.h"
 
-// Define the ChipSelect pin for the led matrix (Dont use the SS or MISO pin of your Arduino!)
-// Other pins are Arduino specific SPI pins (MOSI=DIN, SCK=CLK of the LEDMatrix) see https://www.arduino.cc/en/Reference/SPI
-const uint8_t LEDMATRIX_CS_PIN = 2;
-
-// Number of 8x8 segments you are connecting
-const int LEDMATRIX_SEGMENTS = 8;
-const int LEDMATRIX_WIDTH    = LEDMATRIX_SEGMENTS * 8;
-
-const int DISPLAY_WIDTH = 8*4;
-
-// The LEDMatrixDriver class instance
-LEDMatrixDriver lmd(LEDMATRIX_SEGMENTS, LEDMATRIX_CS_PIN);
-
-byte dec(int number, int x, int y) {
-  return (NUMBERS_FONT[number][y] >> (7-x)) & 1;
-}
-
-byte decc(int chr, int x,int y) {
-  return (TEXT_FONT[chr][x] >> (y)) & 1;
-}
-
-void drawDigit(int number, 
-               int ox, int oy, 
-               bool update = true,
-               bool clear = false) {
-  for (int y = 0; y < NUM_HEIGHT; y++) {
-    for (int x = 0; x < NUM_WIDTH; x++) {
-      int ax = ox+x;
-      int ay = oy+y;
-
-      ax += (ay/8)*32;
-      ay %= 8;
-      
-      bool d = dec(number,x,y);
-      if (d || update) {
-        if (clear) d = false;
-        lmd.setPixel(ax,ay,d);
-      }
-    }
-  }
-}
-
-void drawChar(char chr, int ox, int oy) {
-  for (int y = 0; y < TEXT_HEIGHT; y++) {
-    for (int x = 0; x < TEXT_WIDTH; x++) {
-      int ax = ox+x;
-      int ay = oy+y;
-
-      ax += (ay/8)*32;
-      ay %= 8;
-      
-      lmd.setPixel(ax,ay, decc(chr,x,y));
-    }
-  }
-}
-
-
 extern "C" int clock_gettime(clockid_t unused, struct timespec *tp);
 
 //const char* DAYS[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 const char* DAYS[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
 
+bool transistion = false;
+
 bool showCol = false;
 unsigned long prevColTime = 0;
 unsigned long prevTimeUpdate = 0;
 struct tm previousTime;
-
 void updateTime() {
   time_t now;
   struct tm timeinfo;
@@ -118,6 +63,11 @@ void updateTime() {
     prevColTime = currTime;
   }
   drawDigit(10,12,-1,false,showCol);
+}
+
+void checkButtons() {
+  // TODO
+  // if (button1 is down && !transistion) transistion = true;
 }
 
 void setup() {
@@ -167,12 +117,14 @@ void setup() {
   ArduinoOTA.begin();
   
 	// Init the display
-	lmd.setEnabled(true);
-	lmd.setIntensity(2);   // 0 = low, 10 = high
+  displayInit();
   
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+  // Setup the buttons
+  // TODO
 
   delay(3000);
 }
@@ -181,9 +133,11 @@ void loop() {
   ArduinoOTA.handle();
   
   updateTime();
+  checkButtons();
 
 	// Flush framebuffer
-  lmd.display();
+  displayUpdate();
   
-  delay(1000);
+  if (transistion) delay(50);
+  else delay(1000);
 }
