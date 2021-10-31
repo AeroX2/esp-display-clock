@@ -10,6 +10,7 @@
 #include <coredecls.h>
 
 #include "font.h"
+#include "display.h"
 
 extern "C" int clock_gettime(clockid_t unused, struct timespec *tp);
 
@@ -30,7 +31,7 @@ void updateTime() {
 
   // Draw the new time
   if (previousTime.tm_min != timeinfo.tm_min) {
-    //Serial.println("Update the time");
+    Serial.println("Update the time");
 
     if (timeinfo.tm_hour/10 != 0) drawDigit(timeinfo.tm_hour/10,0,-1);
     else drawDigit(timeinfo.tm_hour/10,0,-1,true,true);
@@ -65,11 +66,6 @@ void updateTime() {
   drawDigit(10,12,-1,false,showCol);
 }
 
-void checkButtons() {
-  // TODO
-  // if (button1 is down && !transistion) transistion = true;
-}
-
 void setup() {
   Serial.begin(115200);
 
@@ -80,8 +76,9 @@ void setup() {
 
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   setenv("TZ", "AEST-10AEDT,M10.1.0,M4.1.0/3", 0); // https://github.com/nayarsystems/posix_tz_db
-  
-  ArduinoOTA.setPasswordHash("f540f14b5d81681bf5e408bb481c6a25");
+
+  // JamesClockUpdatePassword
+  ArduinoOTA.setPasswordHash("fa6cecc079e1bd670f416301907e1f0b");
 
   ArduinoOTA.onStart([]() {
     String type;
@@ -123,9 +120,6 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Setup the buttons
-  // TODO
-
   delay(3000);
 }
 
@@ -133,11 +127,6 @@ void loop() {
   ArduinoOTA.handle();
   
   updateTime();
-  checkButtons();
 
-	// Flush framebuffer
-  displayUpdate();
-  
-  if (transistion) delay(50);
-  else delay(1000);
+  delay(50);
 }

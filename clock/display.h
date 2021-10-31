@@ -5,7 +5,7 @@
 
 // Define the ChipSelect pin for the led matrix (Dont use the SS or MISO pin of your Arduino!)
 // Other pins are Arduino specific SPI pins (MOSI=DIN, SCK=CLK of the LEDMatrix) see https://www.arduino.cc/en/Reference/SPI
-const uint8_t LEDMATRIX_CS_PIN = 2;
+const uint8_t LEDMATRIX_CS_PIN = D3;
 
 // Number of 8x8 segments you are connecting
 const int LEDMATRIX_SEGMENTS = 8;
@@ -19,16 +19,17 @@ LEDMatrixDriver lmd(LEDMATRIX_SEGMENTS, LEDMATRIX_CS_PIN);
 void displayInit() {
   lmd.setEnabled(true);
   lmd.setIntensity(2);   // 0 = low, 10 = high
+  lmd.clear();
 }
 
 void displayUpdate() {
   lmd.display();
 }
 
-void setPixel(int x, int y, bool v) {
-  int ax = ox+x;
-  int ay = oy+y;
-  
+void setPixel(int ax, int ay, bool d) {
+//  int ax = ox+x;
+//  int ay = oy+y;
+//  
   ax += (ay/8)*32;
   ay %= 8;
   lmd.setPixel(ax,ay,d);
@@ -51,7 +52,7 @@ void drawDigit(int number,
       bool d = dec(number,x,y);
       if (d || update) {
         if (clear) d = false;
-        setPixel(ox+x,oy+y,d)
+        setPixel(ox+x,oy+y,d);
       }
     }
   }
@@ -60,7 +61,9 @@ void drawDigit(int number,
 void drawChar(char chr, int ox, int oy) {
   for (int y = 0; y < TEXT_HEIGHT; y++) {
     for (int x = 0; x < TEXT_WIDTH; x++) {
-      lmd.setPixel(ox+x,oy+y, decc(chr,x,y));
+      setPixel(ox+x,oy+y,decc(chr,x,y));
     }
   }
 }
+
+#endif
