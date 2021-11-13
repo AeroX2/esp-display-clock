@@ -1,18 +1,13 @@
-#include <ESP8266WiFi.h>
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
 #include <WiFiManager.h>
-#include <ArduinoOTA.h>
-#include <LEDMatrixDriver.hpp>
-
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
 #include <time.h>
-#include <sys/time.h> 
-#include <coredecls.h>
 
 #include "font.h"
 #include "display.h"
 
-extern "C" int clock_gettime(clockid_t unused, struct timespec *tp);
+AsyncWebServer server(80);
 
 //const char* DAYS[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 const char* DAYS[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
@@ -24,10 +19,11 @@ unsigned long prevColTime = 0;
 unsigned long prevTimeUpdate = 0;
 struct tm previousTime;
 void updateTime() {
-  time_t now;
   struct tm timeinfo;
-  time(&now);
-  timeinfo = *localtime(&now);
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
 
   // Draw the new time
   if (previousTime.tm_min != timeinfo.tm_min) {
@@ -66,6 +62,7 @@ void updateTime() {
   drawDigit(10,12,-1,false,showCol);
 }
 
+boolean otaStarted = false;
 void setup() {
   Serial.begin(115200);
 
@@ -73,60 +70,44 @@ void setup() {
   WiFi.hostname("james_clock_controller");
   WiFiManager wifiManager;
   wifiManager.autoConnect();
+  
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "Hi! I am ESP32.");
+  });
 
+  // Bypass ElegantOTA so that it doesn't crash with the display timer.
+  server.on("/update/identity", HTTP_GET, [&](AsyncWebServerRequest *request) {
+    #if defined(ESP8266)
+      request->send(200, "application/json", "{\"id\": \"clock\", \"hardware\": \"ESP8266\"}");
+    #elif defined(ESP32)
+      request->send(200, "application/json", "{\"id\": \"clock\", \"hardware\": \"ESP32\"}");
+    #endif
+  });
+  server.on("/update", HTTP_GET, [&](AsyncWebServerRequest *request){
+    Serial.println("Cancel display update");
+    displayUpdateEnable(false);
+
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", ELEGANT_HTML, ELEGANT_HTML_SIZE);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
+  
+  AsyncElegantOTA.begin(&server);
+  server.begin();
+  Serial.println("HTTP server started");
+  
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   setenv("TZ", "AEST-10AEDT,M10.1.0,M4.1.0/3", 0); // https://github.com/nayarsystems/posix_tz_db
-
-  // JamesClockUpdatePassword
-  ArduinoOTA.setPasswordHash("fa6cecc079e1bd670f416301907e1f0b");
-
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH) {
-      type = "sketch";
-    } else { // U_SPIFFS
-      type = "filesystem";
-    }
-
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    Serial.println("Start updating " + type);
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) {
-      Serial.println("Auth Failed");
-    } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println("Begin Failed");
-    } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println("Connect Failed");
-    } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println("Receive Failed");
-    } else if (error == OTA_END_ERROR) {
-      Serial.println("End Failed");
-    }
-  });
-  ArduinoOTA.begin();
   
 	// Init the display
   displayInit();
-  
+
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-
-  delay(3000);
 }
 
 void loop() {
-  ArduinoOTA.handle();
-  
   updateTime();
-
   delay(50);
 }

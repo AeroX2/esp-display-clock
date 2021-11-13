@@ -1,7 +1,20 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
+#define PxMATRIX_SPI_FREQUENCY 10000000
 #include <PxMatrix.h>
+
+#ifdef ESP32
+  #define P_LAT 22
+  #define P_A 19
+  #define P_B 23
+  #define P_C 18
+  #define P_D 5
+  #define P_E 15
+  #define P_OE 16
+  hw_timer_t * timer = NULL;
+  portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+#endif
 
 #ifdef ESP8266
   #include <Ticker.h>
@@ -28,6 +41,15 @@ uint16_t BLUE = display.color565(0, 0, 255);
 uint16_t WHITE = display.color565(255, 255, 255);
 uint16_t BLACK = display.color565(0, 0, 0);
 
+#ifdef ESP32
+void IRAM_ATTR displayUpdater() {
+  // Increment the counter and set the time of ISR
+  portENTER_CRITICAL_ISR(&timerMux);
+  display.display(DISPLAY_DRAW_TIME);
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
+#endif
+
 #ifdef ESP8266
 // ISR for display refresh
 void displayUpdater() {
@@ -36,6 +58,18 @@ void displayUpdater() {
 #endif
 
 void displayUpdateEnable(bool is_enable) {
+#ifdef ESP32
+  if (is_enable) {
+    timer = timerBegin(0, 80, true);
+    timerAttachInterrupt(timer, &displayUpdater, true);
+    timerAlarmWrite(timer, 4000, true);
+    timerAlarmEnable(timer);
+  } else {
+    timerDetachInterrupt(timer);
+    timerAlarmDisable(timer);
+  }
+#endif
+
 #ifdef ESP8266
   if (is_enable) {
     display_ticker.attach(0.002, displayUpdater);
@@ -50,9 +84,6 @@ void displayInit() {
   display.setScanPattern(ZAGZIG);
   displayUpdateEnable(true);
 }
-
-uint16_t color = display.color565(random(0, 256), random(0, 256), random(0, 256));
-int blub = 0;
 
 void setPixel(int ax, int ay, bool d) {
   display.drawPixel(ax, ay, d ? WHITE : BLACK);
