@@ -22,6 +22,15 @@ struct tm previousTime = {0};
 bool showCol = false;
 unsigned long prevColTime = 0;
 
+void drawCenteredString(const char *buf, int x, int y) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(buf, x, y, &x1, &y1, &w,
+                        &h);  // calc width of new string
+  display.setCursor(x - w / 2 - 1, y);
+  display.write(buf);
+}
+
 void updateTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
@@ -52,22 +61,12 @@ void updateTime() {
   }
 }
 
-void drawCenteredString(const char *buf, int x, int y) {
-  int16_t x1, y1;
-  uint16_t w, h;
-  display.getTextBounds(buf, x, y, &x1, &y1, &w,
-                        &h);  // calc width of new string
-  display.setCursor(x - w / 2 - 1, y);
-  display.write(buf);
-}
-
 unsigned int waveTimeCounter = 0;
 void displayUpdate() {
   updateTime();
 
-  display.fillScreen(0);
-
-  display.setTextColor(display.color565(0, 0, 8));
+  display.clearData();
+  display.setTextColor(display.color565(255, 255, 255));
   drawCenteredString(showCol ? currentTime : currentTimeNoColumn, 32 / 2 - 1,
                      1);
   drawCenteredString(currentDate, 32 / 2 - 1, 9);

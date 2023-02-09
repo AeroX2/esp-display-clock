@@ -31,7 +31,7 @@ class QuarterScanMatrixPanel : public VirtualMatrixPanel {
     this->display->drawPixelRGB888(coords.x, coords.y, r, g, b);
   }
 
-  inline void fillScreen(uint16_t color) {
+  inline void clearData() {
     for (int x = 0; x < 32; x++) {
       for (int y = 0; y < 16; y++) {
         pixelData[x][y] = 0;

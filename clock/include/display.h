@@ -24,8 +24,8 @@
 HUB75_I2S_CFG mxconfig(64, 8, 1,
                        {R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN,
                         B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN},
-                       HUB75_I2S_CFG::SHIFTREG, false, HUB75_I2S_CFG::HZ_15M, 3,
-                       true);
+                       HUB75_I2S_CFG::SHIFTREG, false, HUB75_I2S_CFG::HZ_10M, 1,
+                       false);
 
 MatrixPanel_I2S_DMA dmaOutput(mxconfig);
 
@@ -34,7 +34,8 @@ QuarterScanMatrixPanel display(dmaOutput, 1, 1, 32, 16);
 
 void displayInit() {
   dmaOutput.begin();
-  display.fillScreen(0);
+  dmaOutput.setBrightness(100);
+  display.clearScreen();
 }
 
 #endif
