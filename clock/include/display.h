@@ -29,7 +29,7 @@ HUB75_I2S_CFG mxconfig(64, 8, 1,
 
 MatrixPanel_I2S_DMA dmaOutput(mxconfig);
 
-// // Create virtual 1/2 to 1/4 scan pixel co-ordinate mapping class.
+// Create virtual 1/2 to 1/4 scan pixel co-ordinate mapping class.
 QuarterScanMatrixPanel display(dmaOutput, 1, 1, 32, 16);
 
 void displayInit() {
