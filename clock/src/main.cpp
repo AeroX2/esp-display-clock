@@ -9,32 +9,56 @@
 #include <string.h>
 // #include <time.h>
 
+#include <FastLED.h>
+
 #include "display.h"
+#include "bigpixel.h"
+
+// #include "bulletin.h"
+#include "karma_22.h"
+#include "karma_10.h"
+// #include "terminal.h"
+// #include "upheavtt.h"
+
+// #include "extrude.h"
+// #include "pixel_game.h"
+// #include "inflammable.h"
+// #include "roboto.h"
 
 AsyncWebServer server(80);
 Timezone timezone;
 
 char currentTime[10] = {0};
 char currentTimeNoColumn[10] = {0};
-char currentDate[10] = {0};
+char currentDate[15] = {0};
 
+bool justBooted = true;
 bool showCol = false;
 unsigned long prevColTime = 0;
 
 void drawCenteredString(const char* buf, int x, int y) {
   int16_t x1, y1;
   uint16_t w, h;
-  display.getTextBounds(buf, x, y, &x1, &y1, &w, &h);  // calc width of new string
-  display.setCursor(x - w / 2 - 1, y);
+  display.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);  // calc width of new string
+  display.setCursor(x - w / 2, y + h - 1);
   display.write(buf);
 }
 
 void updateTime() {
-  if (timeStatus() == timeNotSet) {
+  timeStatus_t status = timeStatus();
+  if (status == timeNotSet) {
     Serial.println("Failed to obtain time");
     strcpy(currentTime, "Conn");
     strcpy(currentTimeNoColumn, "Conn");
     strcpy(currentDate, "Fail");
+    return;
+  }
+
+  if (status == timeNeedsSync) {
+    Serial.println("Waiting to sync");
+    strcpy(currentTime, "Gett");
+    strcpy(currentTimeNoColumn, "ting");
+    strcpy(currentDate, "Time");
     return;
   }
 
@@ -46,14 +70,16 @@ void updateTime() {
   }
 
   // Draw the new time
-  if (minuteChanged()) {
+  if (minuteChanged() || justBooted) {
+    justBooted = false;
+
     strncpy(currentTime, timezone.dateTime("G:i").c_str(), sizeof(currentTime));
     strncpy(currentTimeNoColumn, timezone.dateTime("G i").c_str(), sizeof(currentTimeNoColumn));
-    strncpy(currentDate, timezone.dateTime("Mj").c_str(), sizeof(currentDate));
-    if (currentDate[4] == '\0') {
-      currentDate[4] = currentDate[3];
-      currentDate[3] = ' ';
-    }
+    strncpy(currentDate, timezone.dateTime("F j").c_str(), sizeof(currentDate));
+    // if (currentDate[4] == '\0') {
+    //   currentDate[4] = currentDate[3];
+    //   currentDate[3] = ' ';
+    // }
   }
 }
 
@@ -62,26 +88,34 @@ void displayUpdate() {
   updateTime();
 
   display.clearData();
-  display.setTextColor(display.color565(255, 255, 255));
+  display.setTextColor(display.color565(10, 10, 10));
 
+  display.setFont(&Karma_Future22pt7b);
   drawCenteredString(
       showCol ? currentTime : currentTimeNoColumn,
-      32 / 2,
+      DISPLAY_WIDTH / 2,
       1);
-  drawCenteredString(currentDate, 32 / 2, 9);
+  display.setFont(&Karma_Future10pt7b);
+  drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
 
-  for (int x = 0; x < 32; x++) {
-    for (int y = 0; y < 16; y++) {
+  for (int x = 0; x < DISPLAY_WIDTH; x++) {
+    for (int y = 0; y < DISPLAY_HEIGHT; y++) {
       if (display.getPixel(x, y) > 0)
         continue;
 
       int16_t v = 0;
       uint8_t wibble = sin8(waveTimeCounter);
-      v += sin16(x * wibble * 6 + waveTimeCounter);
-      v += cos16(y * (128 - wibble) + waveTimeCounter);
-      v += sin16(y * x * cos8(-waveTimeCounter) / 8);
+      v += sin16(x * wibble * 2 + waveTimeCounter);
+      v += cos16(y * (128 - wibble) / 2 + waveTimeCounter);
+      v += sin16((y * x / 64) * cos8(-waveTimeCounter));
+      v = constrain(v, -32768, 32767);
+      uint8_t colorIndex = map(v, -32768, 32767, 0, 255);
 
-      CRGB currentColor = ColorFromPalette(RainbowColors_p, (v >> 8) + 127);
+      // CRGBPalette16 palette = CRGBPalette16(CRGB::Blue, CRGB::Purple, CRGB::Magenta, CRGB::Black);
+      CRGB currentColor = ColorFromPalette(PartyColors_p, colorIndex);
+      // currentColor.r = constrain(currentColor.r, 50, 255);
+      // currentColor.g = constrain(currentColor.g, 50, 255);
+      // currentColor.b = constrain(currentColor.b, 50, 255);
       display.drawPixelRGB888(x, y, currentColor.r, currentColor.g,
                               currentColor.b);
     }
@@ -93,7 +127,7 @@ void setup() {
   Serial.begin(115200);
 
   // Setup wifi
-  WiFi.hostname("james_clock_controller");
+  WiFi.hostname("james_clock_controller_v2");
   WiFiManager wifiManager;
   wifiManager.setShowStaticFields(true);
   wifiManager.setShowDnsFields(true);
@@ -162,10 +196,11 @@ void setup() {
 
 int updateTimeCounter = 0;
 void loop() {
-  if (updateTimeCounter++ > 50) {
+  if (updateTimeCounter++ > 20) {
     updateTimeCounter = 0;
     displayUpdate();
   }
 
+  ElegantOTA.loop();
   delay(1);
 }
