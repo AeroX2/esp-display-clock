@@ -1,40 +1,40 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include "quarter_scan_panel.h"  // Virtual Display to re-map co-ordinates such that they draw correctly on a 32x16 1/4 Scan panel
+#define DISPLAY_WIDTH 128
+#define DISPLAY_HEIGHT 64
 
-/* Pin 1,3,5,7,9,11,13,15 */
-#define R1_PIN 16
-#define B1_PIN 17
-#define R2_PIN 5
-#define B2_PIN 18
-#define A_PIN 19
-#define C_PIN 21
-#define CLK_PIN 23
-#define OE_PIN 33
+#include "buffer_scan_panel.h"
 
-/* Pin 2,6,10,12,14 */
-#define G1_PIN 4
-#define G2_PIN 26
-#define B_PIN 15
-#define D_PIN 13
-#define LAT_PIN 25
-#define E_PIN -1  // required for 1/32 scan panels
+#define R1_PIN  GPIO_NUM_2
+#define G1_PIN  GPIO_NUM_15
+#define B1_PIN  GPIO_NUM_4
+#define R2_PIN  GPIO_NUM_16
+#define G2_PIN  GPIO_NUM_27
+#define B2_PIN  GPIO_NUM_17
 
-HUB75_I2S_CFG mxconfig(64, 8, 1,
+#define A_PIN   GPIO_NUM_5
+#define B_PIN   GPIO_NUM_18
+#define C_PIN   GPIO_NUM_19
+#define D_PIN   GPIO_NUM_21
+#define E_PIN   GPIO_NUM_12
+#define LAT_PIN GPIO_NUM_26
+#define OE_PIN  GPIO_NUM_25
+
+#define CLK_PIN GPIO_NUM_22
+
+HUB75_I2S_CFG mxconfig(DISPLAY_WIDTH, DISPLAY_HEIGHT, HUB75_I2S_CFG::shift_driver::FM6124,
                        {R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN,
-                        B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN},
-                       HUB75_I2S_CFG::SHIFTREG, false, HUB75_I2S_CFG::HZ_10M, 1,
-                       false);
+                        B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN});
 
 MatrixPanel_I2S_DMA dmaOutput(mxconfig);
 
-// Create virtual 1/2 to 1/4 scan pixel co-ordinate mapping class.
-QuarterScanMatrixPanel display(dmaOutput, 1, 1, 32, 16);
+// Create a virtual scan matrix to keep track of the pixel data
+BufferMatrixPanel display(dmaOutput, 1, 1, DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
 void displayInit() {
   dmaOutput.begin();
-  dmaOutput.setBrightness(100);
+  dmaOutput.setBrightness(170);
   display.clearScreen();
 }
 
