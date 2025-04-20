@@ -7,16 +7,16 @@
 
 #include <ezTime.h>
 #include <string.h>
-// #include <time.h>
 
 #include <FastLED.h>
+#include <FastTrig.h>
 
 #include "display.h"
-#include "bigpixel.h"
 
-// #include "bulletin.h"
 #include "karma_22.h"
 #include "karma_10.h"
+
+// #include "bulletin.h"
 // #include "terminal.h"
 // #include "upheavtt.h"
 
@@ -76,14 +76,11 @@ void updateTime() {
     strncpy(currentTime, timezone.dateTime("G:i").c_str(), sizeof(currentTime));
     strncpy(currentTimeNoColumn, timezone.dateTime("G i").c_str(), sizeof(currentTimeNoColumn));
     strncpy(currentDate, timezone.dateTime("F j").c_str(), sizeof(currentDate));
-    // if (currentDate[4] == '\0') {
-    //   currentDate[4] = currentDate[3];
-    //   currentDate[3] = ' ';
-    // }
   }
 }
 
-unsigned int waveTimeCounter = 0;
+#define TO_SIN16(x) ((x) * 10430)  // Convert float to FastLED 16-bit angle
+
 void displayUpdate() {
   updateTime();
 
@@ -98,29 +95,45 @@ void displayUpdate() {
   display.setFont(&Karma_Future10pt7b);
   drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
 
+  float t = millis() / 1000.;
   for (int x = 0; x < DISPLAY_WIDTH; x++) {
     for (int y = 0; y < DISPLAY_HEIGHT; y++) {
       if (display.getPixel(x, y) > 0)
         continue;
 
-      int16_t v = 0;
-      uint8_t wibble = sin8(waveTimeCounter);
-      v += sin16(x * wibble * 2 + waveTimeCounter);
-      v += cos16(y * (128 - wibble) / 2 + waveTimeCounter);
-      v += sin16((y * x / 64) * cos8(-waveTimeCounter));
-      v = constrain(v, -32768, 32767);
-      uint8_t colorIndex = map(v, -32768, 32767, 0, 255);
+        uint8_t r,g,b;
 
-      // CRGBPalette16 palette = CRGBPalette16(CRGB::Blue, CRGB::Purple, CRGB::Magenta, CRGB::Black);
-      CRGB currentColor = ColorFromPalette(PartyColors_p, colorIndex);
-      // currentColor.r = constrain(currentColor.r, 50, 255);
-      // currentColor.g = constrain(currentColor.g, 50, 255);
-      // currentColor.b = constrain(currentColor.b, 50, 255);
-      display.drawPixelRGB888(x, y, currentColor.r, currentColor.g,
-                              currentColor.b);
+        int16_t s1 = sin16(TO_SIN16(x / 18.f + t));
+        int16_t s2 = sin16(TO_SIN16(y / 14.f));
+        int16_t s3 = sin16(TO_SIN16(y / 18.f + t));
+        int16_t s4 = sin16(TO_SIN16(x / 14.f - t));
+
+        float v = ((s1 * s2 + s3 * s4) / 32768.0) * 255.0;
+        r = constrain(int(v), 0, 255);
+
+        t += 0.2;
+
+        s1 = sin16(TO_SIN16(x / 18.f + t));
+        s3 = sin16(TO_SIN16(y / 18.f + t));
+        s4 = sin16(TO_SIN16(x / 14.f - t));
+
+        v = ((s1 * s2 + s3 * s4) / 32768.0) * 255.0;
+        g = constrain(int(v), 0, 255);
+
+        t += 0.2;
+
+        s1 = sin16(TO_SIN16(x / 18.f + t));
+        s3 = sin16(TO_SIN16(y / 18.f + t));
+        s4 = sin16(TO_SIN16(x / 14.f - t));
+
+        v = ((s1 * s2 + s3 * s4) / 32768.0) * 255.0;
+        b = constrain(int(v), 180, 255);
+
+        t -= 0.4;
+
+        display.drawPixelRGB888(x, y, r, g, b);
     }
   }
-  waveTimeCounter++;
 }
 
 void setup() {
@@ -167,11 +180,6 @@ void setup() {
   ElegantOTA.begin(&server);
   server.begin();
 
-  // configTime(0, 0, "time.cloudflare.com", "pool.ntp.org", "time.nist.gov");
-  // setenv("TZ", "AEST-10AEDT,M10.1.0,M4.1.0/3",
-  //        1);  // https://github.com/nayarsystems/posix_tz_db
-  // tzset();
-
   int counter = 0;
   Serial.println("Waiting for Wifi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -196,11 +204,8 @@ void setup() {
 
 int updateTimeCounter = 0;
 void loop() {
-  if (updateTimeCounter++ > 20) {
-    updateTimeCounter = 0;
-    displayUpdate();
-  }
+  displayUpdate();
 
   ElegantOTA.loop();
-  delay(1);
+  // delay(1);
 }
