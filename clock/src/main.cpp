@@ -13,6 +13,7 @@
 #include <FastTrig.h>
 
 #include "display.h"
+#include "animations.h"
 
 #include "karma_22.h"
 #include "karma_10.h"
@@ -63,7 +64,7 @@ void updateTime() {
     return;
   }
 
-  // Blick column
+  // Blink column
   unsigned long currTime = millis();
   if (currTime - prevColTime > 500) {
     showCol = !showCol;
@@ -80,13 +81,14 @@ void updateTime() {
   }
 }
 
-#define TO_SIN16(x) ((x) * 10430)  // Convert float to FastLED 16-bit angle
-
 void displayUpdate() {
   updateTime();
 
-  display.clearData();
-  display.setTextColor(display.color565(10, 10, 10));
+  // Update and render animations first (this will clear the display)
+  animationManager.update();
+
+  // Draw text over the animation (original approach)
+  display.setTextColor(display.color565(255, 255, 255));
 
   display.setFont(&Karma_Future22pt7b);
   drawCenteredString(
@@ -95,45 +97,21 @@ void displayUpdate() {
       1);
   display.setFont(&Karma_Future10pt7b);
   drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
+}
 
-  float t = (millis() % 86400) / 1000.;
-  for (int x = 0; x < DISPLAY_WIDTH; x++) {
-    for (int y = 0; y < DISPLAY_HEIGHT; y++) {
-      if (display.getPixel(x, y) > 0)
-        continue;
-
-        uint8_t r,g,b;
-
-        int16_t s1 = sin16(TO_SIN16(x / 18.f + t));
-        int16_t s2 = sin16(TO_SIN16(y / 14.f));
-        int16_t s3 = sin16(TO_SIN16(y / 18.f + t));
-        int16_t s4 = sin16(TO_SIN16(x / 14.f - t));
-
-        float v = ((s1 * s2 + s3 * s4) / 32768.0) * 255.0;
-        r = constrain(int(v), 0, 255);
-
-        t += 0.2;
-
-        s1 = sin16(TO_SIN16(x / 18.f + t));
-        s3 = sin16(TO_SIN16(y / 18.f + t));
-        s4 = sin16(TO_SIN16(x / 14.f - t));
-
-        v = ((s1 * s2 + s3 * s4) / 32768.0) * 255.0;
-        g = constrain(int(v), 0, 255);
-
-        t += 0.2;
-
-        s1 = sin16(TO_SIN16(x / 18.f + t));
-        s3 = sin16(TO_SIN16(y / 18.f + t));
-        s4 = sin16(TO_SIN16(x / 14.f - t));
-
-        v = ((s1 * s2 + s3 * s4) / 32768.0) * 255.0;
-        b = constrain(int(v), 180, 255);
-
-        t -= 0.4;
-
-        display.drawPixelRGB888(x, y, r, g, b);
-    }
+String getAnimationName(AnimationType type) {
+  switch(type) {
+    case ANIM_PLASMA: return "Plasma";
+    case ANIM_PARTICLES: return "Particles";
+    case ANIM_FIRE: return "Fire";
+    case ANIM_SKYLINE: return "Skyline";
+    case ANIM_GALAXY: return "Galaxy";
+    case ANIM_LIGHTNING: return "Lightning";
+    case ANIM_PIPES: return "Pipes";
+    case ANIM_ORBITAL: return "Orbital";
+    case ANIM_STARS: return "Stars";
+    case ANIM_BEACH: return "Beach";
+    default: return "Unknown";
   }
 }
 
@@ -148,11 +126,128 @@ void setup() {
   wifiManager.autoConnect();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-    request->send(200, "text/plain", "Hi! I am ESP32 Clock.");
+    String html = "<!DOCTYPE html><html><head>";
+    html += "<title>ESP32 Clock Controller</title>";
+    html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+    html += "<style>";
+    html += "body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #1a1a1a; color: white; }";
+    html += "h1 { color: #4a90e2; text-align: center; }";
+    html += ".status { background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 15px 0; }";
+    html += ".controls { background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 15px 0; }";
+    html += ".animation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }";
+    html += ".anim-btn { padding: 12px; background: #3a3a3a; color: white; border: 1px solid #555; border-radius: 5px; cursor: pointer; text-decoration: none; text-align: center; transition: all 0.2s; }";
+    html += ".anim-btn:hover { background: #4a4a4a; }";
+    html += ".anim-btn.active { background: #4a90e2; border-color: #6bb6ff; }";
+    html += ".toggle-btn { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }";
+    html += ".toggle-btn:hover { background: #6bb6ff; }";
+    html += ".auto-mode { background: #2a5a2a; }";
+    html += ".manual-mode { background: #5a2a2a; }";
+    html += "a { color: #4a90e2; text-decoration: none; }";
+    html += "a:hover { text-decoration: underline; }";
+    html += "</style></head><body>";
+    
+    html += "<h1>🎨 ESP32 Clock Controller</h1>";
+    
+    // Status section
+    html += "<div class='status'>";
+    html += "<h3>📊 Status</h3>";
+    html += "<p><strong>Current Animation:</strong> " + getAnimationName(animationManager.getCurrentAnimation()) + "</p>";
+    
+    if (animationManager.isInFade()) {
+      html += "<p><strong>Status:</strong> Transitioning (";
+      html += String((int)((animationManager.getFadeProgress() / 255.0f) * 100));
+      html += "%)</p>";
+    } else {
+      html += "<p><strong>Status:</strong> Running</p>";
+    }
+    
+    html += "<p><strong>Mode:</strong> ";
+    html += animationManager.isAutoMode() ? "Auto-Cycling" : "Manual Control";
+    html += "</p>";
+    html += "</div>";
+    
+    // Controls section
+    html += "<div class='controls'>";
+    html += "<h3>🎛️ Controls</h3>";
+    
+    // Mode toggle buttons
+    html += "<p>";
+    html += "<button class='toggle-btn auto-mode' onclick=\"fetch('/mode/auto')\">🔄 Auto Mode</button>";
+    html += "<button class='toggle-btn manual-mode' onclick=\"fetch('/mode/manual')\">🎯 Manual Mode</button>";
+    html += "</p>";
+    
+    // Animation selection grid
+    html += "<h4>Select Animation:</h4>";
+    html += "<div class='animation-grid'>";
+    
+    for (int i = 0; i < ANIM_COUNT; i++) {
+      AnimationType anim = (AnimationType)i;
+      String animName = getAnimationName(anim);
+      String activeClass = (anim == animationManager.getCurrentAnimation()) ? " active" : "";
+      
+      html += "<a href='/animation/" + String(i) + "' class='anim-btn" + activeClass + "'>";
+      
+      // Add emoji for each animation
+      switch(anim) {
+        case ANIM_PLASMA: html += "🌈 "; break;
+        case ANIM_PARTICLES: html += "✨ "; break;
+        case ANIM_FIRE: html += "🔥 "; break;
+        case ANIM_SKYLINE: html += "🏙️ "; break;
+        case ANIM_GALAXY: html += "🌌 "; break;
+        case ANIM_LIGHTNING: html += "⚡ "; break;
+        case ANIM_PIPES: html += "🔧 "; break;
+        case ANIM_ORBITAL: html += "🪐 "; break;
+        case ANIM_STARS: html += "⭐ "; break;
+        case ANIM_BEACH: html += "🏖️ "; break;
+      }
+      
+      html += animName + "</a>";
+    }
+    html += "</div>";
+    html += "</div>";
+    
+    // Additional info
+    html += "<div class='status'>";
+    html += "<h3>ℹ️ Information</h3>";
+    html += "<p>In <strong>Auto Mode</strong>, animations cycle every 30 seconds with smooth 2-second fade transitions.</p>";
+    html += "<p>In <strong>Manual Mode</strong>, you can select any animation and it will stay active.</p>";
+    html += "<p><a href='/erase'>🗑️ Erase WiFi Settings & Restart</a></p>";
+    html += "</div>";
+    
+    html += "<script>";
+    html += "setInterval(() => { if (document.hidden === false) location.reload(); }, 5000);";  // Auto-refresh every 5 seconds when visible
+    html += "</script>";
+    html += "</body></html>";
+    
+    request->send(200, "text/html", html);
+  });
+
+  // Animation selection endpoint
+  server.on("^/animation/([0-9]+)$", HTTP_GET, [](AsyncWebServerRequest* request) {
+    String animStr = request->pathArg(0);
+    int animIndex = animStr.toInt();
+    
+    if (animIndex >= 0 && animIndex < ANIM_COUNT) {
+      animationManager.setAnimation((AnimationType)animIndex);
+      request->redirect("/");
+    } else {
+      request->send(400, "text/plain", "Invalid animation index");
+    }
+  });
+
+  // Mode control endpoints
+  server.on("/mode/auto", HTTP_GET, [](AsyncWebServerRequest* request) {
+    animationManager.setAutoMode(true);
+    request->redirect("/");
+  });
+
+  server.on("/mode/manual", HTTP_GET, [](AsyncWebServerRequest* request) {
+    animationManager.setAutoMode(false);
+    request->redirect("/");
   });
 
   server.on("/erase", HTTP_GET, [](AsyncWebServerRequest* request) {
-    request->send(200, "text/plain", "Erasing...");
+    request->send(200, "text/plain", "Erasing WiFi settings and restarting...");
 
     WiFiManager wifiManager;
     wifiManager.erase();
@@ -193,8 +288,13 @@ void setup() {
 
   // Init the display
   displayInit();
+  
+  // Initialize animation manager
+  animationManager.begin();
 
-  Serial.println("Display initialised!");
+  Serial.println("Display and animations initialized!");
+  Serial.println("Animations will cycle every 30 seconds with 2-second fade transitions");
+  Serial.println("Visit the web interface to control animations manually");
 
   delay(3000);
 }
