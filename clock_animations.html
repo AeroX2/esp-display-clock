@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>128x64 Clock Animation Emulator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .display {
+            width: 512px;
+            height: 256px;
+            background: #000;
+            border: 3px solid #333;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            image-rendering: pixelated;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            background: #2a2a2a;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #3a3a3a;
+        }
+        button.active {
+            background: #4a90e2;
+            border-color: #6bb6ff;
+        }
+        .info {
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+        .time-display {
+            font-size: 18px;
+            color: #4a90e2;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>128x64 Clock Animation Emulator</h1>
+    <div class="time-display" id="timeDisplay"></div>
+    <div class="display">
+        <canvas id="canvas" width="128" height="64"></canvas>
+    </div>
+    <div class="controls">
+        <button id="plasma" class="active">Plasma Field</button>
+        <button id="particles">Particle Flow</button>
+        <button id="fire">Fire Effect</button>
+        <button id="squares">Marching Squares</button>
+        <button id="lava">Lava Lamp</button>
+    </div>
+    <div class="info">
+        <p>This emulator shows how different background animations would look on your 128x64 display.</p>
+        <p>The canvas is scaled up 4x for better visibility. Each animation creates colorful, dynamic backgrounds perfect for a clock display.</p>
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const timeDisplay = document.getElementById('timeDisplay');
+        let currentAnimation = 'plasma';
+        let animationFrame = 0;
+        let isRunning = true;
+        function hslToRgb(h, s, l) {
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = l - c / 2;
+            let r, g, b;
+            if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
+            else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
+            else if (h >= 120 && h < 180) { r = 0; g = c; b = x; }
+            else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
+            else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
+            else { r = c; g = 0; b = x; }
+            return [
+                Math.round((r + m) * 255),
+                Math.round((g + m) * 255),
+                Math.round((b + m) * 255)
+            ];
+        }
+
+        const animations = {
+            plasma: () => {
+                const imageData = ctx.createImageData(128, 64);
+                const data = imageData.data;
+                const time = animationFrame * 0.03;
+                for (let y = 0; y < 64; y++) {
+                    for (let x = 0; x < 128; x++) {
+                        const i = (y * 128 + x) * 4;
+                        const v1 = Math.sin(x * 0.08 + time);
+                        const v2 = Math.sin(y * 0.08 + time * 1.2);
+                        const v3 = Math.sin((x + y) * 0.04 + time * 0.8);
+                        const plasma = (v1 + v2 + v3) / 3;
+                        const hue = 280 + plasma * 80;
+                        const saturation = 0.7 + plasma * 0.3;
+                        const lightness = 0.4 + plasma * 0.3;
+                        const [r, g, b] = hslToRgb(hue % 360, saturation, lightness);
+                        data[i] = r;
+                        data[i + 1] = g;
+                        data[i + 2] = b;
+                        data[i + 3] = 255;
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+            },
+            squares: () => {
+                const squareSize = 8;
+                const time = animationFrame * 0.1;
+                for (let y = 0; y < 64; y += squareSize) {
+                    for (let x = 0; x < 128; x += squareSize) {
+                        const offset = Math.floor((x + y + time * 10) / squareSize) % 3;
+                        const hue = (offset * 120 + time * 30) % 360;
+                        const brightness = 0.3 + offset * 0.2;
+                        const [r, g, b] = hslToRgb(hue, 0.8, brightness);
+                        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                        ctx.fillRect(x, y, squareSize, squareSize);
+                        ctx.strokeStyle = `rgba(255, 255, 255, 0.1)`;
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x, y, squareSize, squareSize);
+                    }
+                }
+            },
+            particles: () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+                ctx.fillRect(0, 0, 128, 64);
+                for (let i = 0; i < 15; i++) {
+                    const x = (animationFrame * 0.3 * (1 + i * 0.1) + i * 25) % 140 - 6;
+                    const y = 32 + Math.sin(animationFrame * 0.02 + i) * 25;
+                    const hue = (animationFrame * 0.8 + i * 40) % 360;
+                    const [r, g, b] = hslToRgb(hue, 0.9, 0.6);
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    const trailX = x - 8;
+                    if (trailX > 0) {
+                        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
+                        ctx.beginPath();
+                        ctx.arc(trailX, y, 1.2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            },
+            fire: () => {
+                const imageData = ctx.createImageData(128, 64);
+                const data = imageData.data;
+                for (let y = 0; y < 64; y++) {
+                    for (let x = 0; x < 128; x++) {
+                        const i = (y * 128 + x) * 4;
+                        const noise = Math.sin(x * 0.08 + animationFrame * 0.04) * Math.cos(y * 0.12 + animationFrame * 0.03);
+                        const flame = Math.max(0, (y + noise * 8) / 64);
+                        if (flame > 0.1) {
+                            const r = Math.min(255, flame * 240);
+                            const g = Math.min(200, Math.max(0, (flame - 0.3) * 350));
+                            const b = Math.max(0, (flame - 0.7) * 600);
+                            data[i] = r;
+                            data[i + 1] = g;
+                            data[i + 2] = b;
+                            data[i + 3] = 255;
+                        } else {
+                            data[i] = data[i + 1] = data[i + 2] = 0;
+                            data[i + 3] = 255;
+                        }
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+            },
+            lava: (() => {
+                const blobs = Array.from({ length: 6 }, () => ({
+                    x: Math.random() * 128,
+                    y: Math.random() * 64,
+                    radius: 10 + Math.random() * 10,
+                    dx: (Math.random() - 0.5) * 1.2,
+                    dy: (Math.random() - 0.5) * 1.2,
+                }));
+                return () => {
+                    ctx.clearRect(0, 0, 128, 64);
+                    const imageData = ctx.createImageData(128, 64);
+                    const data = imageData.data;
+                    for (let b of blobs) {
+                        b.x += b.dx;
+                        b.y += b.dy;
+                        if (b.x < 0 || b.x > 128) b.dx *= -1;
+                        if (b.y < 0 || b.y > 64) b.dy *= -1;
+                    }
+                    for (let y = 0; y < 64; y++) {
+                        for (let x = 0; x < 128; x++) {
+                            let val = 0;
+                            for (let b of blobs) {
+                                const dx = x - b.x;
+                                const dy = y - b.y;
+                                val += b.radius * b.radius / (dx * dx + dy * dy + 1);
+                            }
+                            const i = (y * 128 + x) * 4;
+                            const color = Math.min(255, val * 40);
+                            data[i] = color * 0.8;
+                            data[i + 1] = color * 0.3;
+                            data[i + 2] = color;
+                            data[i + 3] = 255;
+                        }
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                };
+            })()
+        };
+
+        function animate() {
+            if (!isRunning) return;
+            animations[currentAnimation]();
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(1, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                'July', 'August', 'September', 'October', 'November', 'December'];
+            const dateStr = monthNames[now.getMonth()] + ' ' + now.getDate();
+            timeDisplay.textContent = timeStr + ' - ' + dateStr;
+            ctx.textAlign = 'center';
+            ctx.lineWidth = 2;
+            ctx.font = 'bold 40px monospace';
+            ctx.strokeStyle = 'white';
+            ctx.strokeText(timeStr, 64, 35);
+            ctx.fillStyle = 'black';
+            ctx.fillText(timeStr, 64, 35);
+            ctx.font = 'bold 18px monospace';
+            ctx.strokeStyle = 'white';
+            ctx.strokeText(dateStr, 64, 58);
+            ctx.fillStyle = 'black';
+            ctx.fillText(dateStr, 64, 58);
+            animationFrame++;
+            requestAnimationFrame(animate);
+        }
+
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.active').classList.remove('active');
+                btn.classList.add('active');
+                currentAnimation = btn.id;
+                animationFrame = 0;
+            });
+        });
+
+        animate();
+    </script>
+</body>
+</html>
