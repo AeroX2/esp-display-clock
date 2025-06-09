@@ -9,10 +9,10 @@
 #ifndef ESP_HUB75_32x16MatrixPanel
 #define ESP_HUB75_32x16MatrixPanel
 
-#include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
+#include <ESP32-HUB75-VirtualMatrixPanel_T.hpp>
 
-class BufferMatrixPanel : public VirtualMatrixPanel {
-  using VirtualMatrixPanel::VirtualMatrixPanel;
+class BufferMatrixPanel : public VirtualMatrixPanel_T<CHAIN_NONE> {
+  using VirtualMatrixPanel_T<CHAIN_NONE>::VirtualMatrixPanel_T;
 
  public:
   void drawPixel(int16_t x, int16_t y, uint16_t color) override;
@@ -40,14 +40,14 @@ void BufferMatrixPanel::drawPixel(int16_t x, int16_t y, uint16_t color) {
   MatrixPanel_I2S_DMA::color565to888(color, r, g, b);
   pixelData[x][y] = (r << 16) + (g << 8) + b;
 
-  VirtualMatrixPanel::drawPixelRGB888(x, y, r, g, b);
+  VirtualMatrixPanel_T<CHAIN_NONE>::drawPixelRGB888(x, y, r, g, b);
 }
 
 void BufferMatrixPanel::drawPixelRGB888(int16_t x, int16_t y, uint8_t r, uint8_t g, uint8_t b) {
   // getCoords(x, y);
   pixelData[x][y] = (r << 16) + (g << 8) + b;
 
-  VirtualMatrixPanel::drawPixelRGB888(x, y, r, g, b);
+  VirtualMatrixPanel_T<CHAIN_NONE>::drawPixelRGB888(x, y, r, g, b);
 }
 
 // inline VirtualCoords QuarterScanMatrixPanel::getCoords(int16_t x, int16_t y) {

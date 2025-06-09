@@ -1,7 +1,8 @@
 #include <Arduino.h>
-#include <WiFiManager.h>
+#include <AsyncTCP.h>
+#include <WiFi.h>
 
-// This has to go after WifiManager to prevent HTTP conflicts
+#include <WiFiManager.h>
 #include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
 
@@ -95,7 +96,7 @@ void displayUpdate() {
   display.setFont(&Karma_Future10pt7b);
   drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
 
-  float t = millis() / 1000.;
+  float t = (millis() % 86400) / 1000.;
   for (int x = 0; x < DISPLAY_WIDTH; x++) {
     for (int y = 0; y < DISPLAY_HEIGHT; y++) {
       if (display.getPixel(x, y) > 0)
@@ -160,10 +161,6 @@ void setup() {
   });
 
   // Bypass ElegantOTA so that it doesn't crash with the display timer.
-  server.on("/update/identity", HTTP_GET, [&](AsyncWebServerRequest* request) {
-    request->send(200, "application/json",
-                  "{\"id\": \"clock\", \"hardware\": \"ESP32\"}");
-  });
   server.on("/update", HTTP_GET, [&](AsyncWebServerRequest* request) {
     // Wifi is really unresponsive if the display is still spitting out signals.
     dmaOutput.stopDMAoutput();
@@ -202,9 +199,13 @@ void setup() {
   delay(3000);
 }
 
-int updateTimeCounter = 0;
+unsigned long lastUpdate = 0;
+const unsigned long FRAME_INTERVAL = 16;  // ~60fps
 void loop() {
-  displayUpdate();
+  if (millis() - lastUpdate >= FRAME_INTERVAL) {
+    displayUpdate();
+    lastUpdate = millis();
+  }
 
   ElegantOTA.loop();
   // delay(1);
