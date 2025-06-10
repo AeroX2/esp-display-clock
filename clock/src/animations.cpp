@@ -166,12 +166,14 @@ void AnimationManager::initializeAnimation(AnimationType type) {
             for (int i = 0; i < MAX_ORBITAL_PARTICLES; i++) {
                 float angle = random(0, 628) / 100.0f;  // Random angle
                 float distance = 5 + random(0, 40);
-                state.orbitalParticles[i].x = state.gravityPoint.x + cos(angle) * distance;
-                state.orbitalParticles[i].y = state.gravityPoint.y + sin(angle) * distance;
+                // Use sin16/cos16 for optimized trigonometry
+                state.orbitalParticles[i].x = state.gravityPoint.x + (cos16(TO_SIN16(angle)) / 32767.0f) * distance;
+                state.orbitalParticles[i].y = state.gravityPoint.y + (sin16(TO_SIN16(angle)) / 32767.0f) * distance;
                 
                 float speed = 0.05f + random(0, 15) / 100.0f;
-                state.orbitalParticles[i].velocityX = cos(angle + PI/2) * speed;
-                state.orbitalParticles[i].velocityY = sin(angle + PI/2) * speed;
+                float perpAngle = angle + PI/2;
+                state.orbitalParticles[i].velocityX = (cos16(TO_SIN16(perpAngle)) / 32767.0f) * speed;
+                state.orbitalParticles[i].velocityY = (sin16(TO_SIN16(perpAngle)) / 32767.0f) * speed;
                 
                 state.orbitalParticles[i].red = random(100, 255);
                 state.orbitalParticles[i].green = random(100, 255);
@@ -196,9 +198,10 @@ void AnimationManager::renderPlasma() {
     
     for (int y = 0; y < DISPLAY_HEIGHT; y++) {
         for (int x = 0; x < DISPLAY_WIDTH; x++) {
-            float v1 = sin(x * PLASMA_SCALE + time);
-            float v2 = sin(y * PLASMA_SCALE + time * 1.2f);
-            float v3 = sin((x + y) * 0.04f + time * 0.8f);
+            // Use sin16 for optimized performance
+            float v1 = sin16(TO_SIN16(x * PLASMA_SCALE + time)) / 32767.0f;
+            float v2 = sin16(TO_SIN16(y * PLASMA_SCALE + time * 1.2f)) / 32767.0f;
+            float v3 = sin16(TO_SIN16((x + y) * 0.04f + time * 0.8f)) / 32767.0f;
             float plasma = (v1 + v2 + v3) / 3.0f;
             
             float hue = 280 + plasma * 80;
@@ -219,9 +222,10 @@ void AnimationManager::renderParticles() {
     for (int i = 0; i < MAX_PARTICLES; i++) {
         if (!state.particles[i].active) continue;
         
-        // Update position
+        // Update position - use sin16 for optimized sine wave
         state.particles[i].x += state.particles[i].velocityX * 0.3f;
-        state.particles[i].y += state.particles[i].velocityY * 0.02f * sin(state.time * 0.02f + i);
+        float sineOscillation = sin16(TO_SIN16(state.time * 0.02f + i)) / 32767.0f;
+        state.particles[i].y += state.particles[i].velocityY * 0.02f * sineOscillation;
         
         // Wrap around screen
         if (state.particles[i].x > DISPLAY_WIDTH + 6) {
@@ -253,7 +257,10 @@ void AnimationManager::renderParticles() {
 void AnimationManager::renderFire() {
     for (int y = 0; y < DISPLAY_HEIGHT; y++) {
         for (int x = 0; x < DISPLAY_WIDTH; x++) {
-            float noise = sin(x * 0.08f + state.time * 0.04f) * cos(y * 0.12f + state.time * 0.03f);
+            // Use sin16 and cos16 for optimized noise generation
+            float sinValue = sin16(TO_SIN16(x * 0.08f + state.time * 0.04f)) / 32767.0f;
+            float cosValue = cos16(TO_SIN16(y * 0.12f + state.time * 0.03f)) / 32767.0f;
+            float noise = sinValue * cosValue;
             float flame = max(0.0f, (y + noise * 8) / DISPLAY_HEIGHT);
             
             if (flame > 0.1f) {
@@ -275,11 +282,11 @@ void AnimationManager::renderSkyline() {
         }
     }
     
-    // Draw stars
+    // Draw stars - use sin16 for optimized brightness calculation
     for (int i = 0; i < 50; i++) {
         int x = (i * 13) % DISPLAY_WIDTH;
         int y = (i * 7) % 40;
-        float brightness = sin(state.time * 0.1f + i) * 0.5f + 0.5f;
+        float brightness = (sin16(TO_SIN16(state.time * 0.1f + i)) / 32767.0f) * 0.5f + 0.5f;
         uint8_t starBright = (uint8_t)(brightness * 255);
         drawPixelWithBlend(x, y, starBright, starBright, starBright);
     }
@@ -307,16 +314,18 @@ void AnimationManager::renderSkyline() {
 }
 
 void AnimationManager::renderGalaxy() {
-    // Dark background
+    // Dark background - optimized distance calculation using integer arithmetic
     for (int y = 0; y < DISPLAY_HEIGHT; y++) {
         for (int x = 0; x < DISPLAY_WIDTH; x++) {
-            float distance = sqrt((x - 64) * (x - 64) + (y - 32) * (y - 32));
-            uint8_t bg = max(0, 51 - (int)(distance * 0.5f));
+            int dx = x - 64;
+            int dy = y - 32;
+            int distanceSquared = dx * dx + dy * dy;  // Avoid sqrt by using squared distance
+            uint8_t bg = max(0, 51 - (int)(distanceSquared * 0.01f));  // Adjusted scale for squared distance
             drawPixelWithBlend(x, y, bg/3, bg/3, bg);
         }
     }
     
-    // Draw spiral arms
+    // Draw spiral arms - use sin16/cos16 for optimized trigonometry
     float centerX = DISPLAY_WIDTH / 2;
     float centerY = DISPLAY_HEIGHT / 2;
     float time = state.time * 0.01f;
@@ -328,8 +337,9 @@ void AnimationManager::renderGalaxy() {
             
             for (float angle = 0; angle < PI * 4; angle += 0.2f) {
                 float radius = angle * 2 * (0.8f + layer * 0.2f);
-                float x = centerX + cos(angle + time * rotationSpeed + startAngle) * radius;
-                float y = centerY + sin(angle + time * rotationSpeed + startAngle) * radius;
+                float totalAngle = angle + time * rotationSpeed + startAngle;
+                float x = centerX + (cos16(TO_SIN16(totalAngle)) / 32767.0f) * radius;
+                float y = centerY + (sin16(TO_SIN16(totalAngle)) / 32767.0f) * radius;
                 
                 if (x >= 0 && x < DISPLAY_WIDTH && y >= 0 && y < DISPLAY_HEIGHT) {
                     float hue = fmod(layer * 45 + time * 30, 360);
@@ -486,15 +496,16 @@ void AnimationManager::renderOrbital() {
             state.orbitalParticles[i].trail[199][1] = state.orbitalParticles[i].y;
         }
         
-        // Apply gravity
+        // Apply gravity - optimized distance calculation
         float dx = state.gravityPoint.x - state.orbitalParticles[i].x;
         float dy = state.gravityPoint.y - state.orbitalParticles[i].y;
-        float distance = sqrt(dx * dx + dy * dy);
+        float distanceSquared = dx * dx + dy * dy;  // Use squared distance to avoid sqrt
         
-        if (distance > 0) {
-            float force = 0.05f / (distance * distance);
-            state.orbitalParticles[i].velocityX += (dx / distance) * force;
-            state.orbitalParticles[i].velocityY += (dy / distance) * force;
+        if (distanceSquared > 1.0f) {  // Avoid division by zero
+            float invDistance = 1.0f / sqrtf(distanceSquared);  // Use single sqrt call
+            float force = 0.05f * invDistance * invDistance * invDistance;  // force = 0.05f / (distance^3)
+            state.orbitalParticles[i].velocityX += dx * force;
+            state.orbitalParticles[i].velocityY += dy * force;
         }
         
         // Update position
@@ -507,12 +518,13 @@ void AnimationManager::renderOrbital() {
         if (state.orbitalParticles[i].y < 0) state.orbitalParticles[i].y = DISPLAY_HEIGHT - 1;
         if (state.orbitalParticles[i].y >= DISPLAY_HEIGHT) state.orbitalParticles[i].y = 0;
         
-        // Limit speed
-        float speed = sqrt(state.orbitalParticles[i].velocityX * state.orbitalParticles[i].velocityX + 
-                          state.orbitalParticles[i].velocityY * state.orbitalParticles[i].velocityY);
-        if (speed > 0.2f) {
-            state.orbitalParticles[i].velocityX = (state.orbitalParticles[i].velocityX / speed) * 0.2f;
-            state.orbitalParticles[i].velocityY = (state.orbitalParticles[i].velocityY / speed) * 0.2f;
+        // Limit speed - optimized speed calculation
+        float velocitySquared = state.orbitalParticles[i].velocityX * state.orbitalParticles[i].velocityX + 
+                               state.orbitalParticles[i].velocityY * state.orbitalParticles[i].velocityY;
+        if (velocitySquared > 0.04f) {  // 0.2f squared
+            float invSpeed = 0.2f / sqrtf(velocitySquared);  // Use single sqrt call
+            state.orbitalParticles[i].velocityX *= invSpeed;
+            state.orbitalParticles[i].velocityY *= invSpeed;
         }
         
         // Draw trail
@@ -545,10 +557,10 @@ void AnimationManager::renderStars() {
         }
     }
     
-    // Draw twinkling stars
+    // Draw twinkling stars - use sin16 for optimized brightness calculation
     for (int i = 0; i < MAX_STARS; i++) {
         state.stars[i].phase += state.stars[i].twinkleSpeed;
-        float brightness = (sin(state.stars[i].phase) + 1.0f) / 2.0f;
+        float brightness = (sin16(TO_SIN16(state.stars[i].phase)) / 32767.0f + 1.0f) / 2.0f;
         
         uint8_t starBright = (uint8_t)(brightness * 255 * 0.8f);
         
@@ -648,9 +660,9 @@ void AnimationManager::renderBeach() {
         }
     }
     
-    // Seabird (render before tree)
+    // Seabird (render before tree) - use sin16 for optimized sine wave
     int birdX = (int)(fmod(time * 10, 150)) - 10;
-    int birdY = 8 + (int)(sin(time * 0.5f) * 3);
+    int birdY = 8 + (int)((sin16(TO_SIN16(time * 0.5f)) / 32767.0f) * 3);
     
     if (birdX >= 0 && birdX < DISPLAY_WIDTH - 4 && birdY >= 0 && birdY < DISPLAY_HEIGHT) {
         // Simple bird shape
@@ -700,11 +712,11 @@ void AnimationManager::renderBeach() {
         }
     }
     
-    // Wave ripples
+    // Wave ripples - use sin16 for optimized wave calculations
     for (int i = 0; i < 32; i++) {
         int x = i * 4;
-        int waveY = seaTop + (int)(sin(time * 3 + i * 0.3f) * 1.5f);
-        float rippleOpacity = sin(time * 2 + i * 0.2f) * 0.3f + 0.3f;
+        int waveY = seaTop + (int)((sin16(TO_SIN16(time * 3 + i * 0.3f)) / 32767.0f) * 1.5f);
+        float rippleOpacity = (sin16(TO_SIN16(time * 2 + i * 0.2f)) / 32767.0f) * 0.3f + 0.3f;
         uint8_t alpha = (uint8_t)(rippleOpacity * 255);
         if (x < DISPLAY_WIDTH && waveY >= 0 && waveY < DISPLAY_HEIGHT) {
             drawPixelWithBlend(x, waveY, 255, 255, 255, alpha);
