@@ -36,6 +36,9 @@ class BufferMatrixPanel : public VirtualMatrixPanel_T<CHAIN_NONE> {
   }
 
   uint16_t getPixel(int16_t x, int16_t y) { 
+    if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT) {
+      return 0;
+    }
     return pixelData[x][y]; 
   }
 

@@ -35,15 +35,6 @@ void initAnimations() {
         case ANIM_LIGHTNING:
             LightningAnimation::init();
             break;
-        case ANIM_PIPES:
-            PipesAnimation::init();
-            break;
-        case ANIM_ORBITAL:
-            OrbitalAnimation::init();
-            break;
-        case ANIM_STARS:
-            StarsAnimation::init();
-            break;
         case ANIM_BEACH:
             BeachAnimation::init();
             break;
@@ -78,15 +69,6 @@ void renderCurrentAnimation() {
             break;
         case ANIM_LIGHTNING:
             LightningAnimation::render();
-            break;
-        case ANIM_PIPES:
-            PipesAnimation::render();
-            break;
-        case ANIM_ORBITAL:
-            OrbitalAnimation::render();
-            break;
-        case ANIM_STARS:
-            StarsAnimation::render();
             break;
         case ANIM_BEACH:
             BeachAnimation::render();
@@ -155,12 +137,6 @@ const char* getAnimationName(AnimationType type) {
             return GalaxyAnimation::getName();
         case ANIM_LIGHTNING:
             return LightningAnimation::getName();
-        case ANIM_PIPES:
-            return PipesAnimation::getName();
-        case ANIM_ORBITAL:
-            return OrbitalAnimation::getName();
-        case ANIM_STARS:
-            return StarsAnimation::getName();
         case ANIM_BEACH:
             return BeachAnimation::getName();
         default:

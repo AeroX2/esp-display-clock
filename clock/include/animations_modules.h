@@ -24,8 +24,6 @@ namespace FireAnimation {
     const char* getName();
 }
 
-
-
 namespace GalaxyAnimation {
     void init();
     void render();
@@ -33,24 +31,6 @@ namespace GalaxyAnimation {
 }
 
 namespace LightningAnimation {
-    void init();
-    void render();
-    const char* getName();
-}
-
-namespace PipesAnimation {
-    void init();
-    void render();
-    const char* getName();
-}
-
-namespace OrbitalAnimation {
-    void init();
-    void render();
-    const char* getName();
-}
-
-namespace StarsAnimation {
     void init();
     void render();
     const char* getName();

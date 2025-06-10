@@ -76,10 +76,10 @@ void updateTime() {
 void displayUpdate() {
   updateTime();
 
-  display.clearData();
+  // Update and render animations
+  renderCurrentAnimation();
 
   display.setTextColor(display.color565(255, 255, 255));
-
   display.setFont(&Karma_Future22pt7b);
   drawCenteredString(
       showCol ? currentTime : currentTimeNoColumn,
@@ -88,15 +88,7 @@ void displayUpdate() {
   display.setFont(&Karma_Future10pt7b);
   drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
 
-  // Update and render animations
-  renderCurrentAnimation();
-
   display.flip();
-}
-
-String getAnimationName(AnimationType type) {
-  // Get name directly without switching animations
-  return String(::getAnimationName(type));
 }
 
 void setupWebServer() {
@@ -112,8 +104,7 @@ void setupWebServer() {
     String json = "{";
     json += "\"currentAnimation\":" + String((int)getCurrentAnimation()) + ",";
     json += "\"inFade\":" + String(isAnimationFading() ? "true" : "false") + ",";
-    json += "\"fadeProgress\":50,";  // Simplified for now
-    json += "\"autoMode\":true";  // Auto mode is always on in new system
+    json += "\"fadeProgress\":50";  // Simplified for now
     json += "}";
     
     request->send(200, "application/json", json);
@@ -126,7 +117,7 @@ void setupWebServer() {
       if (i > 0) json += ",";
       json += "{";
       json += "\"id\":" + String(i) + ",";
-      json += "\"name\":\"" + getAnimationName((AnimationType)i) + "\"";
+      json += "\"name\":\"" + String(getAnimationName((AnimationType)i)) + "\"";
       json += "}";
     }
     json += "]";
@@ -151,19 +142,8 @@ void setupWebServer() {
     }
   });
 
-  // JSON API: Set mode (simplified - new system is always auto)
-  server.on("/api/mode/auto", HTTP_POST, [](AsyncWebServerRequest* request) {
-    // Auto mode is always on in new system
-    request->send(200, "application/json", "{\"success\":true,\"mode\":\"auto\"}");
-  });
-
-  server.on("/api/mode/manual", HTTP_POST, [](AsyncWebServerRequest* request) {
-    // Manual mode not supported in new simplified system
-    request->send(200, "application/json", "{\"success\":true,\"mode\":\"auto\"}");
-  });
-
   server.on("/restart", HTTP_GET, [](AsyncWebServerRequest* request) {
-    request->send(200, "text/plain", "Restarting...");
+    request->redirect("/");
 
     ESP.restart();
   });

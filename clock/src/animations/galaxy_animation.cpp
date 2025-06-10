@@ -63,14 +63,14 @@ namespace GalaxyAnimation {
                         AnimationUtils::hslToRgb(hue, 1.0f, 0.6f, &r, &g, &b);
                         
                         uint8_t alpha = 0.6f * 255;
-                        AnimationUtils::drawPixelWithBlend((int)x, (int)y, r, g, b, alpha);
+                        AnimationUtils::drawPixelWithBlend(x, y, AnimationUtils::rgb888To565(r, g, b), alpha);
                         
                         // Make lines thicker
                         if (x + 1 < DISPLAY_WIDTH) {
-                            AnimationUtils::drawPixelWithBlend((int)x + 1, (int)y, r, g, b, alpha);
+                            AnimationUtils::drawPixelWithBlend(x + 1, y, AnimationUtils::rgb888To565(r, g, b), alpha);
                         }
                         if (y + 1 < DISPLAY_HEIGHT) {
-                            AnimationUtils::drawPixelWithBlend((int)x, (int)y + 1, r, g, b, alpha);
+                            AnimationUtils::drawPixelWithBlend(x, y + 1, AnimationUtils::rgb888To565(r, g, b), alpha);
                         }
                     }
                 }
@@ -78,9 +78,7 @@ namespace GalaxyAnimation {
         }
     }
     
-
-    
     const char* getName() {
         return "Galaxy";
     }
-} 
+}

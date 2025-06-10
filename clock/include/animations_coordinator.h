@@ -10,9 +10,6 @@ enum AnimationType {
     ANIM_FIRE,
     ANIM_GALAXY,
     ANIM_LIGHTNING,
-    ANIM_PIPES,
-    ANIM_ORBITAL,
-    ANIM_STARS,
     ANIM_BEACH,
     ANIM_COUNT
 };

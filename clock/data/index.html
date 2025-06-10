@@ -68,12 +68,6 @@
         .toggle-btn.active { 
             background: #2a5a2a; 
         }
-        .auto-mode { 
-            background: #2a5a2a; 
-        }
-        .manual-mode { 
-            background: #5a2a2a; 
-        }
         a { 
             color: #4a90e2; 
             text-decoration: none; 
@@ -100,33 +94,25 @@
 <body>
     <h1>🎨 ESP32 Clock Controller</h1>
     
-    <div class="message" id="message"></div>
-    
     <div class="status">
         <h3>📊 Status</h3>
         <p><strong>Current Animation:</strong> <span id="currentAnimation">Loading...</span></p>
         <p><strong>Status:</strong> <span id="status">Loading...</span></p>
-        <p><strong>Mode:</strong> <span id="mode">Loading...</span></p>
     </div>
     
     <div class="controls">
         <h3>🎛️ Controls</h3>
-        
-        <p>
-            <button class="toggle-btn auto-mode" id="autoBtn" onclick="setMode('auto')">🔄 Auto Mode</button>
-            <button class="toggle-btn manual-mode" id="manualBtn" onclick="setMode('manual')">🎯 Manual Mode</button>
-        </p>
         
         <h4>Select Animation:</h4>
         <div class="animation-grid" id="animationGrid">
             <!-- Animation buttons will be populated by JavaScript -->
         </div>
     </div>
+
+    <div class="message" id="message"></div>
     
     <div class="status">
-        <h3>ℹ️ Information</h3>
-        <p>In <strong>Auto Mode</strong>, animations cycle every 3 hours with smooth 2-second fade transitions.</p>
-        <p>In <strong>Manual Mode</strong>, you can select any animation and it will stay active.</p>
+        <h3>ℹ️ Extra</h3>
         <p><a href="/erase" onclick="return confirm('Are you sure you want to erase WiFi settings and restart?')">🗑️ Erase WiFi Settings & Restart</a></p>
     </div>
     
@@ -137,10 +123,7 @@
             {id: 2, name: 'Fire', emoji: '🔥'},
             {id: 3, name: 'Galaxy', emoji: '🌌'},
             {id: 4, name: 'Lightning', emoji: '⚡'},
-            {id: 5, name: 'Pipes', emoji: '🔧'},
-            {id: 6, name: 'Orbital', emoji: '🪐'},
-            {id: 7, name: 'Stars', emoji: '⭐'},
-            {id: 8, name: 'Beach', emoji: '🏖️'}
+            {id: 5, name: 'Beach', emoji: '🏖️'}
         ];
         
         let currentState = null;
@@ -183,14 +166,6 @@
             }
         }
         
-        async function setMode(mode) {
-            const result = await fetchAPI(`/api/mode/${mode}`, 'POST');
-            if (result && result.success) {
-                showMessage(`Switched to ${mode} mode`);
-                updateStatus();
-            }
-        }
-        
         async function setAnimation(animationId) {
             const result = await fetchAPI(`/api/animation`, 'POST', { index: animationId }, 'application/x-www-form-urlencoded');
             if (result && result.success) {
@@ -215,11 +190,6 @@
                 statusText = `Transitioning (${Math.round(status.fadeProgress)}%)`;
             }
             document.getElementById('status').textContent = statusText;
-            document.getElementById('mode').textContent = status.autoMode ? 'Auto-Cycling' : 'Manual Control';
-            
-            // Update mode buttons
-            document.getElementById('autoBtn').classList.toggle('active', status.autoMode);
-            document.getElementById('manualBtn').classList.toggle('active', !status.autoMode);
             
             // Update animation grid
             updateAnimationGrid();

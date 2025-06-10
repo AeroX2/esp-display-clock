@@ -2,26 +2,21 @@
 #include "animation_utils.h"
 #include "display.h"
 #include <cmath>
+#include <FastLED.h>
+
+#define TO_SIN16(x) (x * 10430)
 
 namespace PlasmaAnimation {
     // Private state - completely contained within this namespace
     struct State {
         float plasmaTime = 0.0f;
-        float colorShift = 0.0f;
-        uint8_t plasmaTable[64];
         bool initialized = false;
     };
     
     static State state;
     
     void init() {
-        // Initialize plasma lookup table
-        for (int i = 0; i < 64; i++) {
-            state.plasmaTable[i] = (uint8_t)(128 + 127 * sin(i * M_PI / 32.0));
-        }
-        
-        state.plasmaTime = 0.0f;
-        state.colorShift = 0.0f;
+        state.plasmaTime = 0;
         state.initialized = true;
     }
     
@@ -30,34 +25,27 @@ namespace PlasmaAnimation {
             init();
         }
         
-        state.plasmaTime += 0.05f;
-        state.colorShift += 0.02f;
+        state.plasmaTime = fmod(state.plasmaTime + 0.1f, 1000.0f);
         
         for (int y = 0; y < DISPLAY_HEIGHT; y++) {
             for (int x = 0; x < DISPLAY_WIDTH; x++) {
-                // Create plasma effect using sine waves
-                float v1 = sin((x + state.plasmaTime) * 0.1) * 32 + 32;
-                float v2 = sin((y + state.plasmaTime * 0.8) * 0.1) * 32 + 32;
-                float v3 = sin((x + y + state.plasmaTime * 0.6) * 0.1) * 32 + 32;
-                float v4 = sin(sqrt(x*x + y*y) + state.plasmaTime * 0.4) * 32 + 32;
+                float v1 = sin(x * 0.08f + state.plasmaTime);
+                float v2 = sin(y * 0.08f + state.plasmaTime * 1.2f);
+                float v3 = sin((x + y) * 0.04f + state.plasmaTime * 0.8f);
+                float plasma = (v1 + v2 + v3) / 3.0f;
                 
-                int plasma = (int)((v1 + v2 + v3 + v4) / 4) & 63;
-                
-                // Convert to color with shifting hue
-                float hue = (plasma + state.colorShift * 50) / 64.0f;
-                while (hue > 1.0f) hue -= 1.0f;
+                float hue = 280 + plasma * 80;
+                float saturation = 0.7f + plasma * 0.3f;
+                float lightness = 0.4f + plasma * 0.3f;
                 
                 uint8_t r, g, b;
-                AnimationUtils::hslToRgb(hue, 1.0f, 0.5f, &r, &g, &b);
-                
+                AnimationUtils::hslToRgb(fmod(hue, 360.0f) / 360.0f, saturation, lightness, &r, &g, &b);
                 display.drawPixelRGB888(x, y, r, g, b);
             }
         }
     }
     
-
-    
     const char* getName() {
         return "Plasma";
     }
-} 
+}

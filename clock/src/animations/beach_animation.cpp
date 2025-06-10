@@ -52,12 +52,12 @@ namespace BeachAnimation {
             
             // Draw wave line
             if (waveY >= 0 && waveY < DISPLAY_HEIGHT) {
-                AnimationUtils::drawPixelWithBlend(x, waveY, 255, 255, 255, 200); // White foam
+                AnimationUtils::drawPixelWithBlend(x, waveY, AnimationUtils::rgb888To565(255, 255, 255), 200); // White foam
                 if (waveY - 1 >= 0) {
-                    AnimationUtils::drawPixelWithBlend(x, waveY - 1, 100, 150, 255, 150); // Blue water
+                    AnimationUtils::drawPixelWithBlend(x, waveY - 1, AnimationUtils::rgb888To565(100, 150, 255), 150); // Blue water
                 }
                 if (waveY + 1 < DISPLAY_HEIGHT) {
-                    AnimationUtils::drawPixelWithBlend(x, waveY + 1, 150, 200, 255, 100); // Lighter blue
+                    AnimationUtils::drawPixelWithBlend(x, waveY + 1, AnimationUtils::rgb888To565(150, 200, 255), 100); // Lighter blue
                 }
             }
         }
@@ -73,7 +73,7 @@ namespace BeachAnimation {
                 int rayX = sunX + cos(rad) * r;
                 int rayY = sunY + sin(rad) * r;
                 if (rayX >= 0 && rayX < DISPLAY_WIDTH && rayY >= 0 && rayY < DISPLAY_HEIGHT) {
-                    AnimationUtils::drawPixelWithBlend(rayX, rayY, 255, 255, 0, 100);
+                    AnimationUtils::drawPixelWithBlend(rayX, rayY, AnimationUtils::rgb888To565(255, 255, 0), 100);
                 }
             }
         }
@@ -112,7 +112,7 @@ namespace BeachAnimation {
                 int frondX = treeX + cos(angle) * len;
                 int frondY = trunkTop - 2 + sin(angle) * len * 0.3f;
                 if (frondX >= 0 && frondX < DISPLAY_WIDTH && frondY >= 0 && frondY < DISPLAY_HEIGHT) {
-                    AnimationUtils::drawPixelWithBlend(frondX, frondY, 34, 139, 34, 200); // Forest green
+                    AnimationUtils::drawPixelWithBlend(frondX, frondY, AnimationUtils::rgb888To565(34, 139, 34), 200); // Forest green
                 }
             }
         }
@@ -123,16 +123,15 @@ namespace BeachAnimation {
         
         if (birdX >= -5 && birdX < DISPLAY_WIDTH + 5 && birdY >= 0 && birdY < DISPLAY_HEIGHT) {
             // Simple bird shape
-            AnimationUtils::drawPixelWithBlend(birdX, birdY, 255, 255, 255);
-            AnimationUtils::drawPixelWithBlend(birdX - 1, birdY, 255, 255, 255);
-            AnimationUtils::drawPixelWithBlend(birdX + 1, birdY, 255, 255, 255);
-            AnimationUtils::drawPixelWithBlend(birdX, birdY - 1, 255, 255, 255);
+            uint16_t whiteColor = AnimationUtils::rgb888To565(255, 255, 255);
+            AnimationUtils::drawPixelWithBlend(birdX, birdY, whiteColor);
+            AnimationUtils::drawPixelWithBlend(birdX - 1, birdY, whiteColor);
+            AnimationUtils::drawPixelWithBlend(birdX + 1, birdY, whiteColor);
+            AnimationUtils::drawPixelWithBlend(birdX, birdY - 1, whiteColor);
         }
     }
-    
-
     
     const char* getName() {
         return "Beach";
     }
-} 
+}

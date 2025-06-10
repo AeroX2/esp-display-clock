@@ -153,15 +153,15 @@ namespace LightningAnimation {
                     uint8_t intensity = 255 - (p * 3);  // Fade with distance
                     
                     // Core lightning
-                    AnimationUtils::drawPixelWithBlend((int)x1, (int)y1, 255, 255, 255, intensity);
-                    AnimationUtils::drawPixelWithBlend((int)x2, (int)y2, 255, 255, 255, intensity);
+                    AnimationUtils::drawPixelWithBlend((int)x1, (int)y1, AnimationUtils::rgb888To565(255, 255, 255), intensity);
+            AnimationUtils::drawPixelWithBlend((int)x2, (int)y2, AnimationUtils::rgb888To565(255, 255, 255), intensity);
                     
                     // Glow around lightning
                     for (int gx = -1; gx <= 1; gx++) {
                         for (int gy = -1; gy <= 1; gy++) {
                             if (gx == 0 && gy == 0) continue;
                             AnimationUtils::drawPixelWithBlend((int)x1 + gx, (int)y1 + gy, 
-                                                             200, 200, 255, intensity/3);
+                                                             AnimationUtils::rgb888To565(200, 200, 255), intensity/3);
                         }
                     }
                 }
@@ -178,14 +178,12 @@ namespace LightningAnimation {
             for (int i = 0; i < 5; i++) {
                 int x = random(DISPLAY_WIDTH);
                 int y = random(DISPLAY_HEIGHT);
-                AnimationUtils::drawPixelWithBlend(x, y, 255, 255, 200, 100);
+                AnimationUtils::drawPixelWithBlend(x, y, AnimationUtils::rgb888To565(255, 255, 200), 100);
             }
         }
     }
     
-
-    
     const char* getName() {
         return "Lightning";
     }
-} 
+}
