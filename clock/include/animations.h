@@ -127,15 +127,19 @@ private:
     uint32_t fadeStartTime;
     bool inFade;
     uint8_t fadeProgress;  // 0-255
-    AnimationState state;
     bool autoMode;  // True for auto-cycling, false for manual control
     
     // Helper functions
     float hue2rgb(float p, float q, float t);
-    void hslToRgb(float h, float s, float l, uint8_t* r, uint8_t* g, uint8_t* b);
-    uint16_t color565(uint8_t r, uint8_t g, uint8_t b);
     
 public:
+    AnimationState state;  // Make state public so individual animations can access it
+    
+    // Make helper functions public so individual animations can use them
+    void hslToRgb(float h, float s, float l, uint8_t* r, uint8_t* g, uint8_t* b);
+    uint16_t color565(uint8_t r, uint8_t g, uint8_t b);
+    void drawPixelWithBlend(int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
+    void applyFade(uint8_t fadeAmount);
     AnimationManager();
     void begin();
     void update();
@@ -146,7 +150,7 @@ public:
     void setAutoMode(bool enabled);
     bool isAutoMode() const { return autoMode; }
     
-    // Individual animation functions
+    // Individual animation functions (now implemented in separate files)
     void renderPlasma();
     void renderParticles();
     void renderFire();
@@ -157,10 +161,6 @@ public:
     void renderOrbital();
     void renderStars();
     void renderBeach();
-    
-    // Utility functions
-    void drawPixelWithBlend(int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
-    void applyFade(uint8_t fadeAmount);
     
     // Getters
     AnimationType getCurrentAnimation() const { return currentAnimation; }
