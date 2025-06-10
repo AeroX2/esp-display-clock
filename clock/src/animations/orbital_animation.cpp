@@ -1,115 +1,133 @@
-#include "animation_base.h"
+#include "animations_modules.h"
+#include "animation_utils.h"
+#include "display.h"
+#include <cmath>
 
-void Animations::initOrbital(AnimationManager* manager) {
-    // Initialize orbital particles
-    manager->state.gravityPoint.x = DISPLAY_WIDTH / 2;
-    manager->state.gravityPoint.y = DISPLAY_HEIGHT / 2;
-    manager->state.gravityPoint.velocityX = 0.2f;
-    manager->state.gravityPoint.velocityY = 0.15f;
+namespace OrbitalAnimation {
+    struct Particle {
+        float x, y;
+        float velocityX, velocityY;
+        uint8_t red, green, blue;
+        float trail[200][2];
+        uint8_t trailLength;
+    };
     
-    for (int i = 0; i < MAX_ORBITAL_PARTICLES; i++) {
-        float angle = random(0, 628) / 100.0f;  // Random angle
-        float distance = 5 + random(0, 40);
-        // Use sin16/cos16 for optimized trigonometry
-        manager->state.orbitalParticles[i].x = manager->state.gravityPoint.x + (cos16(TO_SIN16(angle)) / 32767.0f) * distance;
-        manager->state.orbitalParticles[i].y = manager->state.gravityPoint.y + (sin16(TO_SIN16(angle)) / 32767.0f) * distance;
+    struct State {
+        Particle particles[20];
+        float gravityX = 64.0f;
+        float gravityY = 32.0f;
+        bool initialized = false;
+    };
+    
+    static State state;
+    
+    void init() {
+        // Initialize orbital particles
+        for (int i = 0; i < 20; i++) {
+            state.particles[i].x = random(0, DISPLAY_WIDTH);
+            state.particles[i].y = random(0, DISPLAY_HEIGHT);
+            state.particles[i].velocityX = random(-200, 200) / 100.0f;
+            state.particles[i].velocityY = random(-200, 200) / 100.0f;
+            state.particles[i].red = random(100, 255);
+            state.particles[i].green = random(100, 255);
+            state.particles[i].blue = random(100, 255);
+            state.particles[i].trailLength = 0;
+        }
+        state.initialized = true;
+    }
+    
+    void render() {
+        if (!state.initialized) {
+            init();
+        }
         
-        float speed = 0.05f + random(0, 15) / 100.0f;
-        float perpAngle = angle + PI/2;
-        manager->state.orbitalParticles[i].velocityX = (cos16(TO_SIN16(perpAngle)) / 32767.0f) * speed;
-        manager->state.orbitalParticles[i].velocityY = (sin16(TO_SIN16(perpAngle)) / 32767.0f) * speed;
-        
-        manager->state.orbitalParticles[i].red = random(100, 255);
-        manager->state.orbitalParticles[i].green = random(100, 255);
-        manager->state.orbitalParticles[i].blue = random(100, 255);
-        manager->state.orbitalParticles[i].trailLength = 0;
-    }
-}
-
-void Animations::renderOrbital(AnimationManager* manager) {
-    // Clear with trails
-    manager->applyFade(250);
-    
-    // Update gravity point
-    manager->state.gravityPoint.x += manager->state.gravityPoint.velocityX;
-    manager->state.gravityPoint.y += manager->state.gravityPoint.velocityY;
-    
-    // Bounce gravity point off edges
-    if (manager->state.gravityPoint.x <= 0 || manager->state.gravityPoint.x >= DISPLAY_WIDTH - 1) {
-        manager->state.gravityPoint.velocityX *= -1;
-        manager->state.gravityPoint.x = constrain(manager->state.gravityPoint.x, 0, DISPLAY_WIDTH - 1);
-    }
-    if (manager->state.gravityPoint.y <= 0 || manager->state.gravityPoint.y >= DISPLAY_HEIGHT - 1) {
-        manager->state.gravityPoint.velocityY *= -1;
-        manager->state.gravityPoint.y = constrain(manager->state.gravityPoint.y, 0, DISPLAY_HEIGHT - 1);
-    }
-    
-    // Update particles
-    for (int i = 0; i < MAX_ORBITAL_PARTICLES; i++) {
-        // Store trail
-        if (manager->state.orbitalParticles[i].trailLength < 200) {
-            manager->state.orbitalParticles[i].trail[manager->state.orbitalParticles[i].trailLength][0] = manager->state.orbitalParticles[i].x;
-            manager->state.orbitalParticles[i].trail[manager->state.orbitalParticles[i].trailLength][1] = manager->state.orbitalParticles[i].y;
-            manager->state.orbitalParticles[i].trailLength++;
-        } else {
-            // Shift trail
-            for (int t = 0; t < 199; t++) {
-                manager->state.orbitalParticles[i].trail[t][0] = manager->state.orbitalParticles[i].trail[t + 1][0];
-                manager->state.orbitalParticles[i].trail[t][1] = manager->state.orbitalParticles[i].trail[t + 1][1];
+        // Clear background
+        for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+            for (int x = 0; x < DISPLAY_WIDTH; x++) {
+                display.drawPixelRGB888(x, y, 0, 0, 5);
             }
-            manager->state.orbitalParticles[i].trail[199][0] = manager->state.orbitalParticles[i].x;
-            manager->state.orbitalParticles[i].trail[199][1] = manager->state.orbitalParticles[i].y;
         }
         
-        // Apply gravity - optimized distance calculation
-        float dx = manager->state.gravityPoint.x - manager->state.orbitalParticles[i].x;
-        float dy = manager->state.gravityPoint.y - manager->state.orbitalParticles[i].y;
-        float distanceSquared = dx * dx + dy * dy;  // Use squared distance to avoid sqrt
-        
-        if (distanceSquared > 1.0f) {  // Avoid division by zero
-            float invDistance = 1.0f / sqrtf(distanceSquared);  // Use single sqrt call
-            float force = 0.05f * invDistance * invDistance * invDistance;  // force = 0.05f / (distance^3)
-            manager->state.orbitalParticles[i].velocityX += dx * force;
-            manager->state.orbitalParticles[i].velocityY += dy * force;
+        // Draw gravity center
+        AnimationUtils::drawPixelWithBlend((int)state.gravityX, (int)state.gravityY, 255, 255, 255);
+        for (int r = 1; r <= 3; r++) {
+            for (int angle = 0; angle < 360; angle += 30) {
+                float rad = angle * M_PI / 180.0f;
+                int x = state.gravityX + cos(rad) * r;
+                int y = state.gravityY + sin(rad) * r;
+                if (x >= 0 && x < DISPLAY_WIDTH && y >= 0 && y < DISPLAY_HEIGHT) {
+                    AnimationUtils::drawPixelWithBlend(x, y, 200, 200, 200, 100);
+                }
+            }
         }
         
-        // Update position
-        manager->state.orbitalParticles[i].x += manager->state.orbitalParticles[i].velocityX;
-        manager->state.orbitalParticles[i].y += manager->state.orbitalParticles[i].velocityY;
-        
-        // Wrap around screen
-        if (manager->state.orbitalParticles[i].x < 0) manager->state.orbitalParticles[i].x = DISPLAY_WIDTH - 1;
-        if (manager->state.orbitalParticles[i].x >= DISPLAY_WIDTH) manager->state.orbitalParticles[i].x = 0;
-        if (manager->state.orbitalParticles[i].y < 0) manager->state.orbitalParticles[i].y = DISPLAY_HEIGHT - 1;
-        if (manager->state.orbitalParticles[i].y >= DISPLAY_HEIGHT) manager->state.orbitalParticles[i].y = 0;
-        
-        // Limit speed - optimized speed calculation
-        float velocitySquared = manager->state.orbitalParticles[i].velocityX * manager->state.orbitalParticles[i].velocityX + 
-                               manager->state.orbitalParticles[i].velocityY * manager->state.orbitalParticles[i].velocityY;
-        if (velocitySquared > 0.04f) {  // 0.2f squared
-            float invSpeed = 0.2f / sqrtf(velocitySquared);  // Use single sqrt call
-            manager->state.orbitalParticles[i].velocityX *= invSpeed;
-            manager->state.orbitalParticles[i].velocityY *= invSpeed;
+        // Update and draw particles
+        for (int i = 0; i < 20; i++) {
+            // Calculate gravity effect
+            float dx = state.gravityX - state.particles[i].x;
+            float dy = state.gravityY - state.particles[i].y;
+            float distance = sqrt(dx * dx + dy * dy);
+            if (distance > 1.0f) {
+                float force = 0.5f / (distance * distance);
+                state.particles[i].velocityX += (dx / distance) * force;
+                state.particles[i].velocityY += (dy / distance) * force;
+            }
+            
+            // Apply velocity damping
+            state.particles[i].velocityX *= 0.99f;
+            state.particles[i].velocityY *= 0.99f;
+            
+            // Update position
+            state.particles[i].x += state.particles[i].velocityX;
+            state.particles[i].y += state.particles[i].velocityY;
+            
+            // Boundary bounce
+            if (state.particles[i].x <= 0 || state.particles[i].x >= DISPLAY_WIDTH) {
+                state.particles[i].velocityX *= -0.8f;
+                state.particles[i].x = constrain(state.particles[i].x, 0, DISPLAY_WIDTH - 1);
+            }
+            if (state.particles[i].y <= 0 || state.particles[i].y >= DISPLAY_HEIGHT) {
+                state.particles[i].velocityY *= -0.8f;
+                state.particles[i].y = constrain(state.particles[i].y, 0, DISPLAY_HEIGHT - 1);
+            }
+            
+            // Store trail
+            for (int t = 199; t > 0; t--) {
+                state.particles[i].trail[t][0] = state.particles[i].trail[t-1][0];
+                state.particles[i].trail[t][1] = state.particles[i].trail[t-1][1];
+            }
+            state.particles[i].trail[0][0] = state.particles[i].x;
+            state.particles[i].trail[0][1] = state.particles[i].y;
+            if (state.particles[i].trailLength < 200) {
+                state.particles[i].trailLength++;
+            }
+            
+            // Draw trail
+            for (int t = 1; t < state.particles[i].trailLength; t++) {
+                float alpha = 1.0f - (float)t / 200.0f;
+                int tx = (int)state.particles[i].trail[t][0];
+                int ty = (int)state.particles[i].trail[t][1];
+                if (tx >= 0 && tx < DISPLAY_WIDTH && ty >= 0 && ty < DISPLAY_HEIGHT) {
+                    AnimationUtils::drawPixelWithBlend(tx, ty, 
+                        state.particles[i].red, 
+                        state.particles[i].green, 
+                        state.particles[i].blue, 
+                        (uint8_t)(alpha * 255));
+                }
+            }
+            
+            // Draw particle
+            if (state.particles[i].x >= 0 && state.particles[i].x < DISPLAY_WIDTH &&
+                state.particles[i].y >= 0 && state.particles[i].y < DISPLAY_HEIGHT) {
+                AnimationUtils::drawPixelWithBlend((int)state.particles[i].x, (int)state.particles[i].y, 
+                    state.particles[i].red, state.particles[i].green, state.particles[i].blue);
+            }
         }
-        
-        // Draw trail
-        for (int t = 0; t < manager->state.orbitalParticles[i].trailLength; t++) {
-            float alpha = 1.0f - (float)t / 200.0f;
-            uint8_t alphaVal = (uint8_t)(alpha * 128);
-            manager->drawPixelWithBlend(
-                (int)manager->state.orbitalParticles[i].trail[t][0], 
-                (int)manager->state.orbitalParticles[i].trail[t][1],
-                manager->state.orbitalParticles[i].red / 2, 
-                manager->state.orbitalParticles[i].green / 2, 
-                manager->state.orbitalParticles[i].blue / 2, 
-                alphaVal);
-        }
-        
-        // Draw particle
-        manager->drawPixelWithBlend((int)manager->state.orbitalParticles[i].x, (int)manager->state.orbitalParticles[i].y,
-            manager->state.orbitalParticles[i].red, manager->state.orbitalParticles[i].green, manager->state.orbitalParticles[i].blue);
     }
     
-    // Draw gravity point
-    manager->drawPixelWithBlend((int)manager->state.gravityPoint.x, (int)manager->state.gravityPoint.y, 255, 255, 255, 128);
+
+    
+    const char* getName() {
+        return "Orbital";
+    }
 } 

@@ -14,7 +14,7 @@
 #include <FastTrig.h>
 
 #include "display.h"
-#include "animations.h"
+#include "animations_coordinator.h"
 
 #include "karma_22.h"
 #include "karma_10.h"
@@ -89,25 +89,14 @@ void displayUpdate() {
   drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
 
   // Update and render animations
-  animationManager.update();
+  renderCurrentAnimation();
 
   display.flip();
 }
 
 String getAnimationName(AnimationType type) {
-  switch(type) {
-    case ANIM_PLASMA: return F("Plasma");
-    case ANIM_PARTICLES: return F("Particles");
-    case ANIM_FIRE: return F("Fire");
-    case ANIM_SKYLINE: return F("Skyline");
-    case ANIM_GALAXY: return F("Galaxy");
-    case ANIM_LIGHTNING: return F("Lightning");
-    case ANIM_PIPES: return F("Pipes");
-    case ANIM_ORBITAL: return F("Orbital");
-    case ANIM_STARS: return F("Stars");
-    case ANIM_BEACH: return F("Beach");
-    default: return F("Unknown");
-  }
+  // Get name directly without switching animations
+  return String(::getAnimationName(type));
 }
 
 void setupWebServer() {
@@ -121,10 +110,10 @@ void setupWebServer() {
   // JSON API: Get current status
   server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
     String json = "{";
-    json += "\"currentAnimation\":" + String((int)animationManager.getCurrentAnimation()) + ",";
-    json += "\"inFade\":" + String(animationManager.isInFade() ? "true" : "false") + ",";
-    json += "\"fadeProgress\":" + String((int)((animationManager.getFadeProgress() / 255.0f) * 100)) + ",";
-    json += "\"autoMode\":" + String(animationManager.isAutoMode() ? "true" : "false");
+    json += "\"currentAnimation\":" + String((int)getCurrentAnimation()) + ",";
+    json += "\"inFade\":" + String(isAnimationFading() ? "true" : "false") + ",";
+    json += "\"fadeProgress\":50,";  // Simplified for now
+    json += "\"autoMode\":true";  // Auto mode is always on in new system
     json += "}";
     
     request->send(200, "application/json", json);
@@ -152,7 +141,7 @@ void setupWebServer() {
       int animIndex = indexStr.toInt();
   
       if (animIndex >= 0 && animIndex < ANIM_COUNT) {
-        animationManager.setAnimation((AnimationType)animIndex);
+        setAnimation((AnimationType)animIndex);
         request->send(200, "application/json", "{\"success\":true,\"animation\":" + String(animIndex) + "}");
       } else {
         request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid animation index\"}");
@@ -162,15 +151,15 @@ void setupWebServer() {
     }
   });
 
-  // JSON API: Set mode
+  // JSON API: Set mode (simplified - new system is always auto)
   server.on("/api/mode/auto", HTTP_POST, [](AsyncWebServerRequest* request) {
-    animationManager.setAutoMode(true);
+    // Auto mode is always on in new system
     request->send(200, "application/json", "{\"success\":true,\"mode\":\"auto\"}");
   });
 
   server.on("/api/mode/manual", HTTP_POST, [](AsyncWebServerRequest* request) {
-    animationManager.setAutoMode(false);
-    request->send(200, "application/json", "{\"success\":true,\"mode\":\"manual\"}");
+    // Manual mode not supported in new simplified system
+    request->send(200, "application/json", "{\"success\":true,\"mode\":\"auto\"}");
   });
 
   server.on("/restart", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -242,8 +231,8 @@ void setup() {
   // Init the display
   displayInit();
   
-  // Initialize animation manager
-  animationManager.begin();
+  // Initialize animations
+  initAnimations();
 
   Serial.println("Display and animations initialized!");
   Serial.println("Animations will cycle every 3 hours with 2-second fade transitions");
