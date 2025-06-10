@@ -1,9 +1,3 @@
-#ifndef WEB_INTERFACE_H
-#define WEB_INTERFACE_H
-
-#include <Arduino.h>
-
-const char WEB_INTERFACE_HTML[] PROGMEM = R"(
 <!DOCTYPE html>
 <html>
 <head>
@@ -162,9 +156,24 @@ const char WEB_INTERFACE_HTML[] PROGMEM = R"(
             }, 3000);
         }
         
-        async function fetchAPI(url, method = 'GET') {
+        async function fetchAPI(url, method = 'GET', data = null, contentType = 'application/json') {
+            const options = {
+                method,
+                headers: {}
+            };
+
+            if (data) {
+                if (contentType === 'application/x-www-form-urlencoded') {
+                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                    options.body = new URLSearchParams(data).toString();
+                } else {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(data);
+                }
+            }
+
             try {
-                const response = await fetch(url, { method });
+                const response = await fetch(url, options);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
@@ -184,7 +193,7 @@ const char WEB_INTERFACE_HTML[] PROGMEM = R"(
         }
         
         async function setAnimation(animationId) {
-            const result = await fetchAPI(`/api/animation/${animationId}`, 'POST');
+            const result = await fetchAPI(`/api/animation`, 'POST', { index: animationId }, 'application/x-www-form-urlencoded');
             if (result && result.success) {
                 const animName = animations.find(a => a.id === animationId)?.name || 'Unknown';
                 showMessage(`Switched to ${animName} animation`);
@@ -237,6 +246,3 @@ const char WEB_INTERFACE_HTML[] PROGMEM = R"(
     </script>
 </body>
 </html>
-)";
-
-#endif // WEB_INTERFACE_H 

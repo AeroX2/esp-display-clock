@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <AsyncTCP.h>
 #include <WiFi.h>
+#include <LittleFS.h>
 
 #include <WiFiManager.h>
 #include <ESPAsyncWebServer.h>
@@ -14,7 +15,6 @@
 
 #include "display.h"
 #include "animations.h"
-#include "web_interface.h"
 
 #include "karma_22.h"
 #include "karma_10.h"
@@ -90,6 +90,8 @@ void displayUpdate() {
 
   // Update and render animations
   animationManager.update();
+
+  display.flip();
 }
 
 String getAnimationName(AnimationType type) {
@@ -109,9 +111,11 @@ String getAnimationName(AnimationType type) {
 }
 
 void setupWebServer() {
+  LittleFS.begin();
+
   // Serve main web interface
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-    request->send_P(200, "text/html; charset=UTF-8", WEB_INTERFACE_HTML);
+    request->send(LittleFS, "/index.html");
   });
 
   // JSON API: Get current status
@@ -142,15 +146,19 @@ void setupWebServer() {
   });
 
   // JSON API: Set animation
-  server.on("^/api/animation/([0-9]+)$", HTTP_POST, [](AsyncWebServerRequest* request) {
-    String animStr = request->pathArg(0);
-    int animIndex = animStr.toInt();
-    
-    if (animIndex >= 0 && animIndex < ANIM_COUNT) {
-      animationManager.setAnimation((AnimationType)animIndex);
-      request->send(200, "application/json", "{\"success\":true,\"animation\":" + String(animIndex) + "}");
+  server.on("/api/animation", HTTP_POST, [](AsyncWebServerRequest* request) {
+    if (request->hasParam("index", true)) {
+      String indexStr = request->getParam("index", true)->value();
+      int animIndex = indexStr.toInt();
+  
+      if (animIndex >= 0 && animIndex < ANIM_COUNT) {
+        animationManager.setAnimation((AnimationType)animIndex);
+        request->send(200, "application/json", "{\"success\":true,\"animation\":" + String(animIndex) + "}");
+      } else {
+        request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid animation index\"}");
+      }
     } else {
-      request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid animation index\"}");
+      request->send(400, "application/json", "{\"success\":false,\"error\":\"Missing animation index\"}");
     }
   });
 
@@ -163,6 +171,12 @@ void setupWebServer() {
   server.on("/api/mode/manual", HTTP_POST, [](AsyncWebServerRequest* request) {
     animationManager.setAutoMode(false);
     request->send(200, "application/json", "{\"success\":true,\"mode\":\"manual\"}");
+  });
+
+  server.on("/restart", HTTP_GET, [](AsyncWebServerRequest* request) {
+    request->send(200, "text/plain", "Restarting...");
+
+    ESP.restart();
   });
 
   server.on("/erase", HTTP_GET, [](AsyncWebServerRequest* request) {

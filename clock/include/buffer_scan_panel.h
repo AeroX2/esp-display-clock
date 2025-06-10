@@ -27,6 +27,14 @@ class BufferMatrixPanel : public VirtualMatrixPanel_T<CHAIN_NONE> {
     }
   }
 
+  inline void flip() {
+    for (int x = 0; x < DISPLAY_WIDTH; x++) {
+      for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+        VirtualMatrixPanel_T<CHAIN_NONE>::drawPixel(x, y, pixelData[x][y]);
+      }
+    }
+  }
+
   uint16_t getPixel(int16_t x, int16_t y) { 
     return pixelData[x][y]; 
   }

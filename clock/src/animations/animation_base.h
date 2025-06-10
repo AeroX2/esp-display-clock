@@ -1,7 +1,7 @@
 #ifndef ANIMATION_BASE_H
 #define ANIMATION_BASE_H
 
-#include "../animations.h"
+#include "animations.h"
 
 // Forward declaration of AnimationManager
 class AnimationManager;
