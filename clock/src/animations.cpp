@@ -49,9 +49,6 @@ void AnimationManager::update() {
         }
     }
     
-    // Clear the display buffer
-    clearBackground();
-    
     // Render current animation
     switch (currentAnimation) {
         case ANIM_PLASMA: renderPlasma(); break;
@@ -195,7 +192,7 @@ void AnimationManager::initializeAnimation(AnimationType type) {
 }
 
 void AnimationManager::renderPlasma() {
-    float time = state.time * TIME_SCALE;
+    float time = state.time;// * TIME_SCALE;
     
     for (int y = 0; y < DISPLAY_HEIGHT; y++) {
         for (int x = 0; x < DISPLAY_WIDTH; x++) {
@@ -746,6 +743,7 @@ uint16_t AnimationManager::color565(uint8_t r, uint8_t g, uint8_t b) {
 
 void AnimationManager::drawPixelWithBlend(int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha) {
     if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT) return;
+    if (display.getPixel(x,y) == 0xFFFF) return;
     
     if (alpha == 255) {
         display.drawPixelRGB888(x, y, r, g, b);
@@ -764,10 +762,6 @@ void AnimationManager::drawPixelWithBlend(int x, int y, uint8_t r, uint8_t g, ui
         
         display.drawPixelRGB888(x, y, nr, ng, nb);
     }
-}
-
-void AnimationManager::clearBackground() {
-    display.clearData();
 }
 
 void AnimationManager::applyFade(uint8_t fadeAmount) {

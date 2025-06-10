@@ -18,15 +18,6 @@
 #include "karma_22.h"
 #include "karma_10.h"
 
-// #include "bulletin.h"
-// #include "terminal.h"
-// #include "upheavtt.h"
-
-// #include "extrude.h"
-// #include "pixel_game.h"
-// #include "inflammable.h"
-// #include "roboto.h"
-
 AsyncWebServer server(80);
 Timezone timezone;
 
@@ -84,10 +75,8 @@ void updateTime() {
 void displayUpdate() {
   updateTime();
 
-  // Update and render animations first (this will clear the display)
-  animationManager.update();
+  display.clearData();
 
-  // Draw text over the animation (original approach)
   display.setTextColor(display.color565(255, 255, 255));
 
   display.setFont(&Karma_Future22pt7b);
@@ -97,6 +86,9 @@ void displayUpdate() {
       1);
   display.setFont(&Karma_Future10pt7b);
   drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
+
+  // Update and render animations
+  animationManager.update();
 }
 
 String getAnimationName(AnimationType type) {
@@ -126,100 +118,94 @@ void setup() {
   wifiManager.autoConnect();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = "<!DOCTYPE html><html><head>";
-    html += "<title>ESP32 Clock Controller</title>";
-    html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
-    html += "<style>";
-    html += "body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #1a1a1a; color: white; }";
-    html += "h1 { color: #4a90e2; text-align: center; }";
-    html += ".status { background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 15px 0; }";
-    html += ".controls { background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 15px 0; }";
-    html += ".animation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }";
-    html += ".anim-btn { padding: 12px; background: #3a3a3a; color: white; border: 1px solid #555; border-radius: 5px; cursor: pointer; text-decoration: none; text-align: center; transition: all 0.2s; }";
-    html += ".anim-btn:hover { background: #4a4a4a; }";
-    html += ".anim-btn.active { background: #4a90e2; border-color: #6bb6ff; }";
-    html += ".toggle-btn { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }";
-    html += ".toggle-btn:hover { background: #6bb6ff; }";
-    html += ".auto-mode { background: #2a5a2a; }";
-    html += ".manual-mode { background: #5a2a2a; }";
-    html += "a { color: #4a90e2; text-decoration: none; }";
-    html += "a:hover { text-decoration: underline; }";
-    html += "</style></head><body>";
+    String html = F("<!DOCTYPE html><html><head>");
+    html += F("<title>ESP32 Clock Controller</title>");
+    html += F("<meta name='viewport' content='width=device-width, initial-scale=1'>");
+    html += F("<style>");
+    html += F("body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #1a1a1a; color: white; }");
+    html += F("h1 { color: #4a90e2; text-align: center; }");
+    html += F(".status { background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 15px 0; }");
+    html += F(".controls { background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 15px 0; }");
+    html += F(".animation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }");
+    html += F(".anim-btn { padding: 12px; background: #3a3a3a; color: white; border: 1px solid #555; border-radius: 5px; cursor: pointer; text-decoration: none; text-align: center; transition: all 0.2s; }");
+    html += F(".anim-btn:hover { background: #4a4a4a; }");
+    html += F(".anim-btn.active { background: #4a90e2; border-color: #6bb6ff; }");
+    html += F(".toggle-btn { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }");
+    html += F(".toggle-btn:hover { background: #6bb6ff; }");
+    html += F(".auto-mode { background: #2a5a2a; }");
+    html += F(".manual-mode { background: #5a2a2a; }");
+    html += F("a { color: #4a90e2; text-decoration: none; }");
+    html += F("a:hover { text-decoration: underline; }");
+    html += F("</style></head><body>");
     
-    html += "<h1>🎨 ESP32 Clock Controller</h1>";
+    html += F("<h1>🎨 ESP32 Clock Controller</h1>");
     
-    // Status section
-    html += "<div class='status'>";
-    html += "<h3>📊 Status</h3>";
-    html += "<p><strong>Current Animation:</strong> " + getAnimationName(animationManager.getCurrentAnimation()) + "</p>";
+    html += F("<div class='status'>");
+    html += F("<h3>📊 Status</h3>");
+    html += ("<p><strong>Current Animation:</strong> ") + getAnimationName(animationManager.getCurrentAnimation()) + ("</p>");
     
     if (animationManager.isInFade()) {
-      html += "<p><strong>Status:</strong> Transitioning (";
+      html += F("<p><strong>Status:</strong> Transitioning (");
       html += String((int)((animationManager.getFadeProgress() / 255.0f) * 100));
-      html += "%)</p>";
+      html += F("%)</p>");
     } else {
-      html += "<p><strong>Status:</strong> Running</p>";
+      html += F("<p><strong>Status:</strong> Running</p>");
     }
     
-    html += "<p><strong>Mode:</strong> ";
-    html += animationManager.isAutoMode() ? "Auto-Cycling" : "Manual Control";
-    html += "</p>";
-    html += "</div>";
+    html += F("<p><strong>Mode:</strong> ");
+    html += animationManager.isAutoMode() ? F("Auto-Cycling") : F("Manual Control");
+    html += F("</p>");
+    html += F("</div>");
     
-    // Controls section
-    html += "<div class='controls'>";
-    html += "<h3>🎛️ Controls</h3>";
+    html += F("<div class='controls'>");
+    html += F("<h3>🎛️ Controls</h3>");
     
-    // Mode toggle buttons
-    html += "<p>";
-    html += "<button class='toggle-btn auto-mode' onclick=\"fetch('/mode/auto')\">🔄 Auto Mode</button>";
-    html += "<button class='toggle-btn manual-mode' onclick=\"fetch('/mode/manual')\">🎯 Manual Mode</button>";
-    html += "</p>";
+    html += F("<p>");
+    html += F("<button class='toggle-btn auto-mode' onclick=\"fetch('/mode/auto')\">🔄 Auto Mode</button>");
+    html += F("<button class='toggle-btn manual-mode' onclick=\"fetch('/mode/manual')\">🎯 Manual Mode</button>");
+    html += F("</p>");
     
-    // Animation selection grid
-    html += "<h4>Select Animation:</h4>";
-    html += "<div class='animation-grid'>";
+    html += F("<h4>Select Animation:</h4>");
+    html += F("<div class='animation-grid'>");
     
     for (int i = 0; i < ANIM_COUNT; i++) {
       AnimationType anim = (AnimationType)i;
       String animName = getAnimationName(anim);
-      String activeClass = (anim == animationManager.getCurrentAnimation()) ? " active" : "";
+      String activeClass = (anim == animationManager.getCurrentAnimation()) ? F(" active") : F("");
       
-      html += "<a href='/animation/" + String(i) + "' class='anim-btn" + activeClass + "'>";
+      html += ("<a href='/animation/") + String(i) + ("' class='anim-btn") + activeClass + ("'>");
       
-      // Add emoji for each animation
       switch(anim) {
-        case ANIM_PLASMA: html += "🌈 "; break;
-        case ANIM_PARTICLES: html += "✨ "; break;
-        case ANIM_FIRE: html += "🔥 "; break;
-        case ANIM_SKYLINE: html += "🏙️ "; break;
-        case ANIM_GALAXY: html += "🌌 "; break;
-        case ANIM_LIGHTNING: html += "⚡ "; break;
-        case ANIM_PIPES: html += "🔧 "; break;
-        case ANIM_ORBITAL: html += "🪐 "; break;
-        case ANIM_STARS: html += "⭐ "; break;
-        case ANIM_BEACH: html += "🏖️ "; break;
+        case ANIM_PLASMA: html += F("🌈 "); break;
+        case ANIM_PARTICLES: html += F("✨ "); break;
+        case ANIM_FIRE: html += F("🔥 "); break;
+        case ANIM_SKYLINE: html += F("🏙️ "); break;
+        case ANIM_GALAXY: html += F("🌌 "); break;
+        case ANIM_LIGHTNING: html += F("⚡ "); break;
+        case ANIM_PIPES: html += F("🔧 "); break;
+        case ANIM_ORBITAL: html += F("🪐 "); break;
+        case ANIM_STARS: html += F("⭐ "); break;
+        case ANIM_BEACH: html += F("🏖️ "); break;
       }
       
-      html += animName + "</a>";
+      html += animName + F("</a>");
     }
-    html += "</div>";
-    html += "</div>";
+    html += F("</div>");
+    html += F("</div>");
     
-    // Additional info
-    html += "<div class='status'>";
-    html += "<h3>ℹ️ Information</h3>";
-    html += "<p>In <strong>Auto Mode</strong>, animations cycle every 30 seconds with smooth 2-second fade transitions.</p>";
-    html += "<p>In <strong>Manual Mode</strong>, you can select any animation and it will stay active.</p>";
-    html += "<p><a href='/erase'>🗑️ Erase WiFi Settings & Restart</a></p>";
-    html += "</div>";
+    html += F("<div class='status'>");
+    html += F("<h3>ℹ️ Information</h3>");
+    html += F("<p>In <strong>Auto Mode</strong>, animations cycle every 30 seconds with smooth 2-second fade transitions.</p>");
+    html += F("<p>In <strong>Manual Mode</strong>, you can select any animation and it will stay active.</p>");
+    html += F("<p><a href='/erase'>🗑️ Erase WiFi Settings & Restart</a></p>");
+    html += F("</div>");
     
-    html += "<script>";
-    html += "setInterval(() => { if (document.hidden === false) location.reload(); }, 5000);";  // Auto-refresh every 5 seconds when visible
-    html += "</script>";
-    html += "</body></html>";
+    html += F("<script>");
+    html += F("setInterval(() => { if (document.hidden === false) location.reload(); }, 5000);");
+    html += F("</script>");
+    html += F("</body></html>");
     
-    request->send(200, "text/html", html);
+    request->send(200, F("text/html"), html);
   });
 
   // Animation selection endpoint

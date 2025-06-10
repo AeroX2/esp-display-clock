@@ -84,6 +84,13 @@
         <button id="stars">Stars</button>
         <button id="beach">Beach Scene</button>
     </div>
+    <select id="colorDepthSelect">
+        <option value="8" selected>Full (8-bit)</option>
+        <option value="6">6-bit</option>
+        <option value="4">4-bit</option>
+        <option value="2">2-bit</option>
+        <option value="1">1-bit</option>
+    </select>
     <div class="info">
         <p>This emulator shows how different background animations would look on your 128x64 display.</p>
         <p>The canvas is scaled up 4x for better visibility. Each animation creates colorful, dynamic backgrounds perfect for a clock display.</p>
@@ -95,6 +102,34 @@
         let currentAnimation = 'beach';
         let animationFrame = 0;
         let isRunning = true;
+        
+        let colorDepth = 8; // Default 8-bit
+        document.getElementById('colorDepthSelect').addEventListener('change', (e) => {
+            colorDepth = parseInt(e.target.value);
+        });
+
+        function quantizeColor(r, g, b) {
+            const levels = (1 << colorDepth) - 1;
+            const quantize = (v) => Math.round(v / 255 * levels) * (255 / levels);
+            return [
+                quantize(r),
+                quantize(g),
+                quantize(b)
+            ];
+        }
+
+        function quantizeCanvas() {
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = img.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const [r, g, b] = quantizeColor(data[i], data[i + 1], data[i + 2]);
+                data[i] = r;
+                data[i + 1] = g;
+                data[i + 2] = b;
+            }
+            ctx.putImageData(img, 0, 0);
+        }
+        
         function hslToRgb(h, s, l) {
             const c = (1 - Math.abs(2 * l - 1)) * s;
             const x = c * (1 - Math.abs((h / 60) % 2 - 1));
@@ -1176,6 +1211,12 @@
             ctx.strokeText(dateStr, 64, 58);
             ctx.fillStyle = 'black';
             ctx.fillText(dateStr, 64, 58);
+            
+            // Apply color depth simulation
+            if (colorDepth < 8) {
+                quantizeCanvas();
+            }
+            
             animationFrame++;
             requestAnimationFrame(animate);
         }

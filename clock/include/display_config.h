@@ -1,0 +1,7 @@
+#ifndef DISPLAY_CONFIG_H
+#define DISPLAY_CONFIG_H
+
+#define DISPLAY_WIDTH 128
+#define DISPLAY_HEIGHT 64
+
+#endif // DISPLAY_CONFIG_H

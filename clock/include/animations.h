@@ -22,7 +22,7 @@ enum AnimationType {
 };
 
 // Animation timing constants
-#define ANIMATION_CYCLE_DURATION (30 * 1000UL)  // 30 seconds for testing (change to 3 * 60 * 60 * 1000UL for production)
+#define ANIMATION_CYCLE_DURATION (3 * 60 * 60 * 1000UL)  // 30 seconds for testing (change to 3 * 60 * 60 * 1000UL for production)
 #define FADE_DURATION 2000  // 2 seconds fade duration
 #define MAX_PARTICLES 15
 #define MAX_LIGHTNING 3
