@@ -16,11 +16,6 @@
 #include "display.h"
 #include "animations_coordinator.h"
 
-// #include "karma_22.h"
-// #include "karma_10.h"
-// #include "karma_22_inside.h"
-// #include "karma_10_inside.h"
-
 #include "courier_new_10.h"
 #include "courier_new_20.h"
 #include "courier_new_outside_10.h"

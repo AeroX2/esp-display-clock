@@ -25,8 +25,6 @@ namespace FireAnimation {
         
         state.frameCount++;
 
-        display.clearData();
-        
         for (int y = 0; y < DISPLAY_HEIGHT; y++) {
             for (int x = 0; x < DISPLAY_WIDTH; x++) {
                 // Convert coordinates to FastLED angles with fixed-point math

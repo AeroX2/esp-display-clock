@@ -5,16 +5,15 @@
 
 // Minimal global state
 static AnimationType currentAnimation = ANIM_PLASMA;
+static AnimationType targetAnimation = ANIM_PLASMA;
 static unsigned long lastCycleTime = 0;
 static unsigned long animationDuration = 3 * 60 * 60 * 1000; // 3 hours per animation
-static bool enableAutoCycle = true;
 
 // Fade state
 static bool fadeActive = false;
 static bool fadeOut = false;
-static uint8_t fadeLevel = 255;
 static unsigned long fadeStartTime = 0;
-static const unsigned long FADE_DURATION = 1000; // 1 second
+static const unsigned long FADE_DURATION = 3000; // 3 second
 
 void initAnimations() {
     // Initialize the current animation
@@ -28,7 +27,6 @@ void initAnimations() {
         case ANIM_FIRE:
             FireAnimation::init();
             break;
-
         case ANIM_GALAXY:
             GalaxyAnimation::init();
             break;
@@ -48,7 +46,7 @@ void initAnimations() {
 
 void renderCurrentAnimation() {
     // Handle auto-cycling
-    if (enableAutoCycle && (millis() - lastCycleTime > animationDuration)) {
+    if (millis() - lastCycleTime > animationDuration) {
         cycleToNextAnimation();
     }
     
@@ -63,7 +61,6 @@ void renderCurrentAnimation() {
         case ANIM_FIRE:
             FireAnimation::render();
             break;
-
         case ANIM_GALAXY:
             GalaxyAnimation::render();
             break;
@@ -81,40 +78,47 @@ void renderCurrentAnimation() {
     // Apply fade if active
     if (fadeActive) {
         unsigned long elapsed = millis() - fadeStartTime;
-        if (elapsed < FADE_DURATION) {
-            float progress = (float)elapsed / FADE_DURATION;
-            if (fadeOut) {
-                fadeLevel = 255 - (uint8_t)(progress * 255);
-            } else {
-                fadeLevel = (uint8_t)(progress * 255);
+
+        uint8_t fadeLevel;
+        float progress = (float)elapsed / FADE_DURATION;
+        if (fadeOut) {
+            fadeLevel = 255 - (uint8_t)(progress * 255);
+            if (elapsed > FADE_DURATION) {
+                currentAnimation = targetAnimation;
+                initAnimations();
+
+                // Screen should be blank by now but just in case.
+                display.clearData();
+
+                startFadeIn();
             }
-            AnimationUtils::applyFade(fadeLevel);
         } else {
-            fadeActive = false;
-            fadeLevel = fadeOut ? 0 : 255;
+            fadeLevel = (uint8_t)(progress * 255);
+            if (elapsed > FADE_DURATION) {
+                fadeActive = false;
+                fadeLevel = 255;
+            }
         }
+
+        AnimationUtils::applyFade(fadeLevel);
     }
 }
 
 void cycleToNextAnimation() {
     // Move to next animation
-    currentAnimation = (AnimationType)((currentAnimation + 1) % ANIM_COUNT);
-    
-    // Initialize new animation
-    initAnimations();
+    targetAnimation = (AnimationType)((currentAnimation + 1) % ANIM_COUNT);
     
     lastCycleTime = millis();
+    startFadeOut();
 }
 
 void setAnimation(AnimationType type) {
     if (type >= ANIM_COUNT) return;
     
-    currentAnimation = type;
-    
-    // Initialize new animation
-    initAnimations();
+    targetAnimation = type;
     
     lastCycleTime = millis();
+    startFadeOut();
 }
 
 AnimationType getCurrentAnimation() {

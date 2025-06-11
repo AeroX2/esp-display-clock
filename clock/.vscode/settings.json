@@ -44,6 +44,12 @@
         "type_traits": "cpp",
         "typeinfo": "cpp",
         "utility": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "chrono": "cpp",
+        "string": "cpp",
+        "optional": "cpp",
+        "mutex": "cpp",
+        "string_view": "cpp",
+        "thread": "cpp"
     }
 }

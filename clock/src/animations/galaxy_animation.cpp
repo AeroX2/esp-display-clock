@@ -14,7 +14,6 @@ namespace GalaxyAnimation {
     void init() {
         state.frameCount = 0;
         state.initialized = true;
-        display.clearData();
     }
     
     void render() {
