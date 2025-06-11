@@ -9,8 +9,9 @@ enum AnimationType {
     ANIM_PARTICLES,
     ANIM_FIRE,
     ANIM_GALAXY,
-    ANIM_LIGHTNING,
+    ANIM_STARS,
     ANIM_BEACH,
+    ANIM_DVD_LOGO,
     ANIM_COUNT
 };
 
@@ -29,4 +30,4 @@ void startFadeIn();
 bool isFading();
 bool isAnimationFading(); // Alias for isFading()
 
-#endif // ANIMATIONS_COORDINATOR_H 
+#endif // ANIMATIONS_COORDINATOR_H

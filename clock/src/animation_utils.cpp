@@ -79,6 +79,25 @@ void AnimationUtils::applyFade(uint8_t fadeAmount) {
     }
 }
 
+void AnimationUtils::drawBitmapTransparent(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color) {
+    int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
+    uint8_t b = 0;
+
+    for (int16_t j = 0; j < h; j++, y++) {
+        for (int16_t i = 0; i < w; i++) {
+            if (i & 7)
+                b <<= 1;
+            else
+                b = pgm_read_byte(&bitmap[j * byteWidth + i / 8]);
+            
+            // Only draw pixel if it's set in the bitmap (skip transparent/empty pixels)
+            if (b & 0x80) {
+                display.drawPixel(x + i, y, color);
+            }
+        }
+    }
+}
+
 void AnimationUtils::drawCircle(float xCenter, float yCenter, float radius, uint16_t color, uint8_t alpha) {
     int x0 = round(xCenter);
     int y0 = round(yCenter);

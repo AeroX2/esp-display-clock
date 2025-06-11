@@ -30,11 +30,14 @@ void initAnimations() {
         case ANIM_GALAXY:
             GalaxyAnimation::init();
             break;
-        case ANIM_LIGHTNING:
-            LightningAnimation::init();
+        case ANIM_STARS:
+            StarAnimation::init();
             break;
         case ANIM_BEACH:
             BeachAnimation::init();
+            break;
+        case ANIM_DVD_LOGO:
+            DVDLogoAnimation::init();
             break;
         default:
             PlasmaAnimation::init();
@@ -64,11 +67,14 @@ void renderCurrentAnimation() {
         case ANIM_GALAXY:
             GalaxyAnimation::render();
             break;
-        case ANIM_LIGHTNING:
-            LightningAnimation::render();
+        case ANIM_STARS:
+            StarAnimation::render();
             break;
         case ANIM_BEACH:
             BeachAnimation::render();
+            break;
+        case ANIM_DVD_LOGO:
+            DVDLogoAnimation::render();
             break;
         default:
             PlasmaAnimation::render();
@@ -139,10 +145,12 @@ const char* getAnimationName(AnimationType type) {
             return FireAnimation::getName();
         case ANIM_GALAXY:
             return GalaxyAnimation::getName();
-        case ANIM_LIGHTNING:
-            return LightningAnimation::getName();
+        case ANIM_STARS:
+            return StarAnimation::getName();
         case ANIM_BEACH:
             return BeachAnimation::getName();
+        case ANIM_DVD_LOGO:
+            return DVDLogoAnimation::getName();
         default:
             return "Unknown";
     }
@@ -166,4 +174,4 @@ bool isFading() {
 
 bool isAnimationFading() {
     return isFading();
-} 
+}

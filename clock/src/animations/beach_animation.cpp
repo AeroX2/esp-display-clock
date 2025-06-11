@@ -20,9 +20,11 @@ namespace BeachAnimation {
         if (!state.initialized) {
             init();
         }
+
+        display.clearData();
         
         state.frameCount++;
-        float time = state.frameCount * 0.005f;  // Matches HTML timing
+        float time = state.frameCount * 0.05f;  // Matches HTML timing
         
         // Sky gradient (40% of height = 25.6px, but we'll use 26px)
         for (int y = 0; y < 26; y++) {
@@ -136,16 +138,27 @@ namespace BeachAnimation {
         int birdX = (int)((time * 10) + 40) % 150 - 10;
         int birdY = 8 + (int)(sin16(time * 32768) / 65535.0f * 6);
         
-        if (birdX >= 0 && birdX < DISPLAY_WIDTH && birdY >= 0 && birdY < DISPLAY_HEIGHT) {
-            uint16_t birdColor = AnimationUtils::rgb888To565(80, 80, 80);
-            uint8_t alpha = 153;  // 0.6 opacity
-            
-            // Simple bird shape (matches HTML)
-            AnimationUtils::drawPixelWithBlend(birdX - 2, birdY, birdColor, alpha);
-            AnimationUtils::drawPixelWithBlend(birdX, birdY - 1, birdColor, alpha);
-            AnimationUtils::drawPixelWithBlend(birdX + 2, birdY, birdColor, alpha);
-            AnimationUtils::drawPixelWithBlend(birdX + 1, birdY + 1, birdColor, alpha);
-        }
+        uint16_t birdColor = AnimationUtils::rgb888To565(0, 0, 0);  // Black
+        
+        // Larger bird shape
+        // Left wing
+        display.drawPixel(birdX - 3, birdY, birdColor);
+        display.drawPixel(birdX - 2, birdY, birdColor);
+        display.drawPixel(birdX - 2, birdY - 1, birdColor);
+        
+        // Body/head
+        display.drawPixel(birdX, birdY - 1, birdColor);
+        display.drawPixel(birdX, birdY, birdColor);
+        display.drawPixel(birdX + 1, birdY, birdColor);
+        
+        // Right wing
+        display.drawPixel(birdX + 2, birdY - 1, birdColor);
+        display.drawPixel(birdX + 2, birdY, birdColor);
+        display.drawPixel(birdX + 3, birdY, birdColor);
+        
+        // Tail
+        display.drawPixel(birdX + 1, birdY + 1, birdColor);
+        display.drawPixel(birdX + 2, birdY + 1, birdColor);
     }
     
     const char* getName() {

@@ -30,7 +30,7 @@ namespace GalaxyAnimation {
     const char* getName();
 }
 
-namespace LightningAnimation {
+namespace StarAnimation {
     void init();
     void render();
     const char* getName();
@@ -42,4 +42,10 @@ namespace BeachAnimation {
     const char* getName();
 }
 
-#endif // ANIMATIONS_MODULES_H 
+namespace DVDLogoAnimation {
+    void init();
+    void render();
+    const char* getName();
+}
+
+#endif // ANIMATIONS_MODULES_H
