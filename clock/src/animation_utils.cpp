@@ -64,7 +64,7 @@ void AnimationUtils::applyFade(uint8_t fadeAmount) {
     for (int y = 0; y < DISPLAY_HEIGHT; y++) {
         for (int x = 0; x < DISPLAY_WIDTH; x++) {
             uint16_t pixel = display.getPixel(x, y);
-            if (pixel != 0 || pixel != 0xFFFF) {
+            if (pixel != 0 && pixel != 0xFFFF) {
                 uint8_t r, g, b;
                 rgb565To888(pixel, &r, &g, &b);
                 

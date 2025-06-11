@@ -14,6 +14,7 @@ namespace GalaxyAnimation {
     void init() {
         state.frameCount = 0;
         state.initialized = true;
+        display.clearData();
     }
     
     void render() {
@@ -27,22 +28,8 @@ namespace GalaxyAnimation {
         float centerY = 32;
         float time = state.frameCount * 0.01f;
         
-        // Background with radial gradient
-        for (int y = 0; y < DISPLAY_HEIGHT; y++) {
-            for (int x = 0; x < DISPLAY_WIDTH; x++) {
-                int dx = x - centerX;
-                int dy = y - centerY;
-                float distance = sqrt(dx * dx + dy * dy);
-                float gradient = distance / 40.0f;
-                gradient = constrain(gradient, 0, 1);
-                
-                uint8_t r = (1 - gradient) * 0x00 + gradient * 0x00;
-                uint8_t g = (1 - gradient) * 0x00 + gradient * 0x00;
-                uint8_t b = (1 - gradient) * 0x11 + gradient * 0x33;
-                
-                display.drawPixelRGB888(x, y, r, g, b);
-            }
-        }
+        // Fade effect
+        AnimationUtils::applyFade(255-35);
         
         // Spiral arms with 4 layers and 2 arms each
         for (int layer = 0; layer < 4; layer++) {

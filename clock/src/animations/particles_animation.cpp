@@ -25,8 +25,8 @@ namespace ParticlesAnimation {
         // Reset frame count before it gets too large to prevent overflow
         state.frameCount = (state.frameCount + 1) % 1000000;
         
-        // Clear background
-        AnimationUtils::applyFade(23);
+        // Fade effect
+        AnimationUtils::applyFade(255-23);
         
         // Draw 15 particles matching original implementation
         for (int i = 0; i < 15; i++) {

@@ -16,8 +16,15 @@
 #include "display.h"
 #include "animations_coordinator.h"
 
-#include "karma_22.h"
-#include "karma_10.h"
+// #include "karma_22.h"
+// #include "karma_10.h"
+// #include "karma_22_inside.h"
+// #include "karma_10_inside.h"
+
+#include "courier_new_10.h"
+#include "courier_new_20.h"
+#include "courier_new_outside_10.h"
+#include "courier_new_outside_20.h"
 
 AsyncWebServer server(80);
 Timezone timezone;
@@ -79,13 +86,24 @@ void displayUpdate() {
   // Update and render animations
   renderCurrentAnimation();
 
-  display.setTextColor(display.color565(255, 255, 255));
-  display.setFont(&Karma_Future22pt7b);
+  display.setFont(&Courier_New_Outside_20pt7b);
+  display.setTextColor(display.color565(255,255,255));
+  drawCenteredString(
+      showCol ? currentTime : currentTimeNoColumn,
+      DISPLAY_WIDTH / 2 + 2,
+      10 - 4);
+  display.setFont(&Courier_New20pt7b);
+  display.setTextColor(display.color565(0,0,0));
   drawCenteredString(
       showCol ? currentTime : currentTimeNoColumn,
       DISPLAY_WIDTH / 2,
-      1);
-  display.setFont(&Karma_Future10pt7b);
+      10);
+
+  display.setFont(&Courier_New_Outside_10pt7b);
+  display.setTextColor(display.color565(255,255,255));
+  drawCenteredString(currentDate, DISPLAY_WIDTH / 2 + 2, 44 - 4);
+  display.setFont(&Courier_New10pt7b);
+  display.setTextColor(display.color565(0,0,0));
   drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
 
   display.flip();

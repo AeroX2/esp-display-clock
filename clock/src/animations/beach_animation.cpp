@@ -1,20 +1,18 @@
 #include "animations_modules.h"
 #include "animation_utils.h"
 #include "display.h"
-#include <cmath>
+#include <FastLED.h>
 
 namespace BeachAnimation {
     struct State {
-        float waveOffset = 0.0f;
-        float time = 0.0f;
+        uint32_t frameCount = 0;
         bool initialized = false;
     };
     
     static State state;
     
     void init() {
-        state.waveOffset = 0.0f;
-        state.time = 0.0f;
+        state.frameCount = 0;
         state.initialized = true;
     }
     
@@ -23,111 +21,130 @@ namespace BeachAnimation {
             init();
         }
         
-        state.time += 0.03f;
-        state.waveOffset += 0.05f;
+        state.frameCount++;
+        float time = state.frameCount * 0.005f;  // Matches HTML timing
         
-        // Sky gradient
-        for (int y = 0; y < DISPLAY_HEIGHT / 2; y++) {
-            uint8_t skyBlue = map(y, 0, DISPLAY_HEIGHT / 2, 135, 206);
+        // Sky gradient (40% of height = 25.6px, but we'll use 26px)
+        for (int y = 0; y < 26; y++) {
             for (int x = 0; x < DISPLAY_WIDTH; x++) {
-                display.drawPixelRGB888(x, y, 135, 206, 235); // Sky blue
+                // Gradient from #037ccb (deep sky blue) to #82ccef (light sky blue)
+                uint8_t r = 0x03 + ((y * (0x82 - 0x03)) / 26);
+                uint8_t g = 0x7c + ((y * (0xcc - 0x7c)) / 26);
+                uint8_t b = 0xcb + ((y * (0xef - 0xcb)) / 26);
+                display.drawPixelRGB888(x, y, r, g, b);
             }
         }
         
-        // Sand
-        for (int y = DISPLAY_HEIGHT / 2; y < DISPLAY_HEIGHT; y++) {
+        // Dry sand background (from 65% = 41.6px to bottom, we'll use 42px)
+        for (int y = 42; y < DISPLAY_HEIGHT; y++) {
             for (int x = 0; x < DISPLAY_WIDTH; x++) {
-                uint8_t sandBrightness = 194 + sin(x * 0.1f + y * 0.05f + state.time) * 20;
-                display.drawPixelRGB888(x, y, sandBrightness, sandBrightness - 20, sandBrightness - 80);
+                display.drawPixelRGB888(x, y, 0xfd, 0xf1, 0xd7);  // #fdf1d7 dry sand
             }
         }
         
-        // Animated waves
-        for (int x = 0; x < DISPLAY_WIDTH; x++) {
-            float wave1 = sin((x + state.waveOffset) * 0.1f) * 4;
-            float wave2 = sin((x + state.waveOffset * 1.3f) * 0.15f) * 2;
-            float wave3 = sin((x + state.waveOffset * 0.8f) * 0.08f) * 3;
-            
-            int waveY = DISPLAY_HEIGHT / 2 + (int)(wave1 + wave2 + wave3);
-            
-            // Draw wave line
-            if (waveY >= 0 && waveY < DISPLAY_HEIGHT) {
-                AnimationUtils::drawPixelWithBlend(x, waveY, AnimationUtils::rgb888To565(255, 255, 255), 200); // White foam
-                if (waveY - 1 >= 0) {
-                    AnimationUtils::drawPixelWithBlend(x, waveY - 1, AnimationUtils::rgb888To565(100, 150, 255), 150); // Blue water
-                }
-                if (waveY + 1 < DISPLAY_HEIGHT) {
-                    AnimationUtils::drawPixelWithBlend(x, waveY + 1, AnimationUtils::rgb888To565(150, 200, 255), 100); // Lighter blue
-                }
-            }
+        // Wave animation (matches CSS waveanim keyframes)
+        float waveScale = 1.0f;
+        float cyclePosition = fmod(time * 0.1f, 1.0f);  // 10s cycle
+        
+        if (cyclePosition <= 0.35f) {
+            // 0% to 35%: scale from 1.0 to 1.3
+            waveScale = 1.0f + (cyclePosition / 0.35f) * 0.3f;
+        } else if (cyclePosition <= 0.69f) {
+            // 35% to 69%: scale from 1.3 back to 1.0
+            waveScale = 1.3f - ((cyclePosition - 0.35f) / (0.69f - 0.35f)) * 0.3f;
+        } else {
+            // 69% to 100%: stay at 1.0
+            waveScale = 1.0f;
         }
         
-        // Sun
-        int sunX = DISPLAY_WIDTH - 15;
-        int sunY = 8;
+        // Sea parameters (30% height scaled, 200% width, -50% left, top at 40%)
+        int seaHeight = (int)(19.2f * waveScale);  // 30% of 64px scaled
+        int seaWidth = 256;   // 200% of 128px
+        int seaLeft = -64;    // -50% of 128px
+        int seaTop = 26;      // 40% of 64px (approximately)
         
-        // Sun rays
-        for (int angle = 0; angle < 360; angle += 45) {
-            float rad = (angle + state.time * 10) * M_PI / 180.0f;
-            for (int r = 8; r <= 12; r++) {
-                int rayX = sunX + cos(rad) * r;
-                int rayY = sunY + sin(rad) * r;
-                if (rayX >= 0 && rayX < DISPLAY_WIDTH && rayY >= 0 && rayY < DISPLAY_HEIGHT) {
-                    AnimationUtils::drawPixelWithBlend(rayX, rayY, AnimationUtils::rgb888To565(255, 255, 0), 100);
-                }
-            }
-        }
-        
-        // Sun body
-        for (int dy = -6; dy <= 6; dy++) {
-            for (int dx = -6; dx <= 6; dx++) {
-                if (dx*dx + dy*dy <= 36) { // radius 6
-                    int px = sunX + dx;
-                    int py = sunY + dy;
-                    if (px >= 0 && px < DISPLAY_WIDTH && py >= 0 && py < DISPLAY_HEIGHT) {
-                        float distance = sqrt(dx*dx + dy*dy);
-                        uint8_t intensity = 255 - (distance * 20);
-                        display.drawPixelRGB888(px, py, 255, 255, intensity);
+        // Draw curved sea using simple ellipse approximation
+        for (int y = seaTop; y < seaTop + seaHeight && y < DISPLAY_HEIGHT; y++) {
+            for (int x = max(0, seaLeft); x < min(DISPLAY_WIDTH, seaLeft + seaWidth); x++) {
+                // Check if point is within elliptical sea area
+                float centerX = seaLeft + seaWidth / 2.0f;
+                float centerY = seaTop + seaHeight / 2.0f;
+                float dx = (x - centerX) / (seaWidth / 2.0f);
+                float dy = (y - centerY) / (seaHeight / 2.0f);
+                
+                if (dx * dx + dy * dy <= 1.0f) {
+                    // Sea gradient (matches CSS)
+                    float gradientPos = (float)(y - seaTop) / seaHeight;
+                    uint8_t r, g, b;
+                    
+                    if (gradientPos <= 0.25f) {
+                        float t = gradientPos / 0.25f;
+                        r = 8 + (uint8_t)(t * (18 - 8));
+                        g = 122 + (uint8_t)(t * (156 - 122));
+                        b = 193 + (uint8_t)(t * (192 - 193));
+                    } else if (gradientPos <= 0.5f) {
+                        float t = (gradientPos - 0.25f) / 0.25f;
+                        r = 18 + (uint8_t)(t * (42 - 18));
+                        g = 156 + (uint8_t)(t * (212 - 156));
+                        b = 192 + (uint8_t)(t * (229 - 192));
+                    } else if (gradientPos <= 0.75f) {
+                        float t = (gradientPos - 0.5f) / 0.25f;
+                        r = 42 + (uint8_t)(t * (150 - 42));
+                        g = 212 + (uint8_t)(t * (233 - 212));
+                        b = 229 + (uint8_t)(t * (239 - 229));
+                    } else {
+                        float t = (gradientPos - 0.75f) / 0.25f;
+                        r = 150 + (uint8_t)(t * (222 - 150));
+                        g = 233 + (uint8_t)(t * (236 - 233));
+                        b = 239 + (uint8_t)(t * (211 - 239));
                     }
+                    
+                    display.drawPixelRGB888(x, y, r, g, b);
                 }
             }
         }
         
-        // Palm tree
-        int treeX = 10;
-        int trunkTop = DISPLAY_HEIGHT / 2;
-        
-        // Trunk
-        for (int y = trunkTop; y < DISPLAY_HEIGHT - 5; y++) {
-            display.drawPixelRGB888(treeX, y, 101, 67, 33); // Brown
-            if (treeX + 1 < DISPLAY_WIDTH) {
-                display.drawPixelRGB888(treeX + 1, y, 101, 67, 33);
-            }
+        // Wet sand animation (matches CSS wetsand keyframes)
+        float wetSandOpacity = 0.2f;
+        if (cyclePosition >= 0.34f && cyclePosition <= 0.35f) {
+            wetSandOpacity = 0.2f + ((cyclePosition - 0.34f) / 0.01f) * 0.2f;
+        } else if (cyclePosition > 0.35f) {
+            wetSandOpacity = 0.4f - ((cyclePosition - 0.35f) / 0.65f) * 0.2f;
         }
         
-        // Palm fronds
-        for (int frond = 0; frond < 5; frond++) {
-            float angle = frond * M_PI * 2 / 5 + state.time * 0.1f;
-            for (int len = 1; len <= 8; len++) {
-                int frondX = treeX + cos(angle) * len;
-                int frondY = trunkTop - 2 + sin(angle) * len * 0.3f;
-                if (frondX >= 0 && frondX < DISPLAY_WIDTH && frondY >= 0 && frondY < DISPLAY_HEIGHT) {
-                    AnimationUtils::drawPixelWithBlend(frondX, frondY, AnimationUtils::rgb888To565(34, 139, 34), 200); // Forest green
+        // Wet sand (37.5% height = 24px)
+        int wetSandHeight = 24;
+        for (int y = seaTop; y < seaTop + wetSandHeight && y < DISPLAY_HEIGHT; y++) {
+            for (int x = max(0, seaLeft); x < min(DISPLAY_WIDTH, seaLeft + seaWidth); x++) {
+                float centerX = seaLeft + seaWidth / 2.0f;
+                float centerY = seaTop + wetSandHeight / 2.0f;
+                float dx = (x - centerX) / (seaWidth / 2.0f);
+                float dy = (y - centerY) / (wetSandHeight / 2.0f);
+                
+                if (dx * dx + dy * dy <= 1.0f) {
+                    // Wet sand color #ecc075 blended with existing
+                    uint8_t wetR = 0xec;
+                    uint8_t wetG = 0xc0;
+                    uint8_t wetB = 0x75;
+                    uint8_t alpha = (uint8_t)(wetSandOpacity * 255);
+                    AnimationUtils::drawPixelWithBlend(x, y, AnimationUtils::rgb888To565(wetR, wetG, wetB), alpha);
                 }
             }
         }
         
-        // Flying seagull
-        int birdX = (int)(state.time * 20) % (DISPLAY_WIDTH + 20) - 10;
-        int birdY = 15 + sin(state.time * 2) * 3;
+        // Seabirds in the distance
+        int birdX = (int)((time * 10) + 40) % 150 - 10;
+        int birdY = 8 + (int)(sin16(time * 32768) / 65535.0f * 6);
         
-        if (birdX >= -5 && birdX < DISPLAY_WIDTH + 5 && birdY >= 0 && birdY < DISPLAY_HEIGHT) {
-            // Simple bird shape
-            uint16_t whiteColor = AnimationUtils::rgb888To565(255, 255, 255);
-            AnimationUtils::drawPixelWithBlend(birdX, birdY, whiteColor);
-            AnimationUtils::drawPixelWithBlend(birdX - 1, birdY, whiteColor);
-            AnimationUtils::drawPixelWithBlend(birdX + 1, birdY, whiteColor);
-            AnimationUtils::drawPixelWithBlend(birdX, birdY - 1, whiteColor);
+        if (birdX >= 0 && birdX < DISPLAY_WIDTH && birdY >= 0 && birdY < DISPLAY_HEIGHT) {
+            uint16_t birdColor = AnimationUtils::rgb888To565(80, 80, 80);
+            uint8_t alpha = 153;  // 0.6 opacity
+            
+            // Simple bird shape (matches HTML)
+            AnimationUtils::drawPixelWithBlend(birdX - 2, birdY, birdColor, alpha);
+            AnimationUtils::drawPixelWithBlend(birdX, birdY - 1, birdColor, alpha);
+            AnimationUtils::drawPixelWithBlend(birdX + 2, birdY, birdColor, alpha);
+            AnimationUtils::drawPixelWithBlend(birdX + 1, birdY + 1, birdColor, alpha);
         }
     }
     
