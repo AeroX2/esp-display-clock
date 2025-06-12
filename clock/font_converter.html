@@ -329,7 +329,8 @@
   <h2 class="ui header">Glyphs <em class="fontname" style="display: none;">FontName unknown</em></h2>
   <p><button class="ui small button violet" id="add" disabled="disabled"><i class="icon add"></i> Add a new character</button>
   <button class="ui small button orange" id="flipAll" disabled="disabled"><i class="icon exchange"></i> Flip All Glyphs</button>
-  <button class="ui small button blue" id="addOutline" disabled="disabled"><i class="icon circle outline"></i> Add 2px Outline</button></p>
+  <button class="ui small button blue" id="addOutline" disabled="disabled"><i class="icon circle outline"></i> Add 2px Outline</button>
+  <button class="ui small button red" id="adjustSpacing" disabled="disabled"><i class="icon compress"></i> Adjust Spacing</button></p>
 
   <div id="loader">
     <div class="advance-wrapper"><div class="advance"></div></div>
@@ -616,6 +617,7 @@ function extractFont () {
   $('#add').attr('disabled', false)
   $('#flipAll').attr('disabled', false)
   $('#addOutline').attr('disabled', false)
+  $('#adjustSpacing').attr('disabled', false)
 
   const glyphsArray = window[name + 'Glyphs']
 
@@ -1149,6 +1151,44 @@ $(document).ready(function () {
        buttonBar.find('#col-value').text('Cols: ' + newWidth)
        buttonBar.find('#base-value').text('Base: ' + newBase)
        buttonBar.find('#xoff-value').text('XOff: ' + newXoff)
+      
+      setGlyphTable(table)
+    })
+  })
+
+  $('#adjustSpacing').click(function () {
+    // Prompt for xAdvance adjustment amount
+    const xAdvAdjustment = parseInt(prompt('Enter xAdvance adjustment amount (negative to decrease):', '-2'))
+    if (isNaN(xAdvAdjustment)) {
+      return // User cancelled or entered invalid value
+    }
+    
+    // Calculate xOffset adjustment (half the rate of xAdvance)
+    const xOffAdjustment = Math.round(xAdvAdjustment / 2)
+    
+    // Apply adjustments to all glyphs
+    $('.table.glyph').each(function() {
+      const table = $(this)
+      let xadv = parseInt(table.attr('data-adv'))
+      let xoff = parseInt(table.attr('data-ow'))
+      
+      // Skip disabled glyphs
+      if (table.attr('data-dis') == 1) {
+        return
+      }
+      
+      // Adjust XAdvance and XOffset
+      xadv = Math.max(0, xadv + xAdvAdjustment)
+      xoff = xoff + xOffAdjustment
+      
+      // Update table attributes
+      table.attr('data-adv', xadv)
+      table.attr('data-ow', xoff)
+      
+      // Update button displays
+      const buttonBar = table.parent().parent().find('.ui.bottom.attached.warning.message.inner.centered')
+      buttonBar.find('#xadv-value').text('XAdv: ' + xadv)
+      buttonBar.find('#xoff-value').text('XOff: ' + xoff)
       
       setGlyphTable(table)
     })

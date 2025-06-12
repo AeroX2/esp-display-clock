@@ -16,10 +16,10 @@
 #include "display.h"
 #include "animations_coordinator.h"
 
-#include "courier_new_10.h"
-#include "courier_new_20.h"
-#include "courier_new_outside_10.h"
-#include "courier_new_outside_20.h"
+#include "courier_new_8.h"
+#include "courier_new_23.h"
+#include "courier_new_outside_8.h"
+#include "courier_new_outside_23.h"
 
 AsyncWebServer server(80);
 Timezone timezone;
@@ -81,25 +81,25 @@ void displayUpdate() {
   // Update and render animations
   renderCurrentAnimation();
 
-  display.setFont(&Courier_New_Outside_20pt7b);
+  display.setFont(&Courier_New_Outside23pt7b);
   display.setTextColor(display.color565(255,255,255));
   drawCenteredString(
       showCol ? currentTime : currentTimeNoColumn,
-      DISPLAY_WIDTH / 2 + 2,
-      10 - 4);
-  display.setFont(&Courier_New20pt7b);
+      DISPLAY_WIDTH / 2 - 3 + 2,
+      9 - 4);
+  display.setFont(&Courier_New23pt7b);
   display.setTextColor(display.color565(0,0,0));
   drawCenteredString(
       showCol ? currentTime : currentTimeNoColumn,
-      DISPLAY_WIDTH / 2,
-      10);
+      DISPLAY_WIDTH / 2 - 3,
+      9);
 
-  display.setFont(&Courier_New_Outside_10pt7b);
+  display.setFont(&Courier_New_Outside8pt7b);
   display.setTextColor(display.color565(255,255,255));
-  drawCenteredString(currentDate, DISPLAY_WIDTH / 2 + 2, 44 - 4);
-  display.setFont(&Courier_New10pt7b);
+  drawCenteredString(currentDate, DISPLAY_WIDTH / 2 + 2, 47 - 4);
+  display.setFont(&Courier_New8pt7b);
   display.setTextColor(display.color565(0,0,0));
-  drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 44);
+  drawCenteredString(currentDate, DISPLAY_WIDTH / 2, 47);
 
   display.flip();
 }
