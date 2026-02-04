@@ -218,8 +218,15 @@ void setup() {
   }
   Serial.println("Connected!");
 
+  // Sync every hour
+  setInterval(3600);
+
   waitForSync();
-  timezone.setLocation("Australia/Sydney");
+  if (!timezone.setLocation("Australia/Sydney")) {
+    Serial.println("Failed to set location, using manual rules");
+    // Australia/Sydney standard rules
+    timezone.setPosix("AEST-10AEDT,M10.1.0,M4.1.0/3"); 
+  }
 
   // Init the display
   displayInit();
@@ -237,6 +244,8 @@ void setup() {
 unsigned long lastUpdate = 0;
 const unsigned long FRAME_INTERVAL = 16;  // ~60fps
 void loop() {
+  events();
+  
   if (millis() - lastUpdate >= FRAME_INTERVAL) {
     displayUpdate();
     lastUpdate = millis();
